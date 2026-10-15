@@ -63,9 +63,13 @@
 - **프레임워크 프리셋 (Framework preset)**: `None`
 - **빌드 명령어 (Build command)**: `npm run build`
 - **빌드 출력 디렉터리 (Build output directory)**: `dist`
-- **환경 변수**: `CARWASH_API_BASE=https://api.carwash.yunseok.kr/api`
-- API는 프런트엔드와 같은 사이트의 HTTPS 도메인으로 연결합니다. 예: `carwash.yunseok.kr` + `api.carwash.yunseok.kr`. 서로 다른 사이트에서는 세션 쿠키가 전달되지 않습니다.
+- **환경 변수**: `CARWASH_API_BASE=https://carwash-api.yunseok.kr/api` (기본값과 같으며, 기존에 다른 값을 설정했다면 갱신)
+- API는 프런트엔드와 같은 사이트의 HTTPS 도메인으로 연결합니다. 예: `carwash.yunseok.kr` + `carwash-api.yunseok.kr`. 서로 다른 사이트에서는 세션 쿠키가 전달되지 않습니다.
 - 현재 화면에 ‘배포 명령’이 필수라면 Workers 설정입니다. Pages의 Git 연동 프로젝트를 생성하고 위 빌드·출력 폴더를 지정하세요.
+
+`wrangler.json`에도 Pages 프로젝트 `carwash-yunseok-kr`의 출력 폴더를 `./dist`로 지정합니다. 기존 프로젝트는 대시보드의 빌드 명령이 `npm run build`인지 확인한 뒤 재배포하세요. 저장소 루트(`.`)를 업로드하거나 루트에서 정적 서버를 실행하면 `.env.example`, Compose 설정, 서버 소스가 공개될 수 있습니다.
+
+빌드는 이전 `dist`를 지운 뒤 계산기 실행에 필요한 HTML·번들·스크립트·PNG만 복사합니다. `.env*`, `server/`, `migrations/`, `scripts/`, 저장소 문서는 공개 산출물에 포함하지 않습니다. 최상위 `404.html`로 없는 경로의 계산기 HTML 대체 응답을 막습니다. 배포 후 `/`와 `/config.js`는 정상 응답하고 `/.env.example`, `/.env`, `/compose.yaml`, `/server/app.js`는 **404**인지 확인하세요.
 
 ## 별도 Docker 서버 실행
 
@@ -85,7 +89,7 @@ docker compose ps
 curl http://127.0.0.1:8787/api/health
 ```
 
-리버스 프록시에서 `https://api.carwash.yunseok.kr`를 `http://127.0.0.1:8787`로 연결하고 `/api/...` 경로를 그대로 전달하세요. `ORIGIN`은 프런트엔드 주소(끝 슬래시 없음), `RP_ID`는 그 호스트명입니다. 이미 등록한 패스키를 유지하려면 RP_ID를 바꾸지 마세요. 프록시가 다른 컨테이너라면 같은 Docker 네트워크의 `api:8787`로 연결합니다.
+리버스 프록시에서 `https://carwash-api.yunseok.kr`를 `http://127.0.0.1:8787`로 연결하고 `/api/...` 경로를 그대로 전달하세요. `ORIGIN`은 프런트엔드 주소(끝 슬래시 없음), `RP_ID`는 그 호스트명입니다. 이미 등록한 패스키를 유지하려면 RP_ID를 바꾸지 마세요. 프록시가 다른 컨테이너라면 같은 Docker 네트워크의 `api:8787`로 연결합니다.
 
 데이터는 `carwash-data` 볼륨에 영구 저장되며 시작 시 스키마를 적용합니다. 운영 시 별도로 DB 백업을 보관하세요. 다음 명령은 실행한 폴더에 백업 파일을 만듭니다.
 
@@ -94,6 +98,22 @@ docker compose exec -T db pg_dump -U carwash carwash > carwash-backup.sql
 ```
 
 요청 제한은 직접 연결 주소 기준입니다. 리버스 프록시 뒤에서는 방문자가 제한을 공유하므로 공개 운영 규모에 맞춰 프록시에서도 요청 제한을 설정하세요.
+
+## 공용 제품 카탈로그
+
+제품 조사 JSON(`schema_version: "1.0.0"`)은 개인 패스키 보관함과 별도인 공용 카탈로그에 저장합니다. API를 실행한 뒤 원본 파일을 표준 입력으로 전달하세요. 원본 파일은 컨테이너 이미지에 포함하지 않습니다.
+
+```bash
+docker compose exec -T api node scripts/import-products.mjs - < /path/to/carwash_products.json
+curl http://127.0.0.1:8787/api/products
+curl http://127.0.0.1:8787/api/products/db-05442
+```
+
+- `GET /api/products`: 출처·조사일·비율 기준과 전체 제품 목록을 반환합니다.
+- `GET /api/products/:product_id`: 해당 제품의 옵션·pH 근거·희석·펌프 프로필을 반환합니다. 두 API 모두 로그인 없이 조회하며 HTTP로 수정할 수 없습니다.
+- 가져오기는 한 트랜잭션으로 처리합니다. 같은 `product_id`는 갱신하므로 재실행해도 중복되지 않으며, 파일에 없는 기존 제품과 개인 보관함은 삭제하지 않습니다. 최상위 조사 메타데이터는 마지막 가져오기 기준입니다.
+- `null`, `unknown`, `calculation_allowed: false`, 단측 희석 상한, 펌프 호환 조건과 출처는 그대로 보존합니다. 소비자는 계산이 허용된 프로필의 명시된 값만 사용해야 하며, 미확인 값을 추정하거나 범위를 임의 보간하지 마세요.
+- 현재 프런트엔드 화면에는 카탈로그 검색을 추가하지 않습니다. 카탈로그는 PostgreSQL과 조회 API로 제공합니다.
 
 ## 로컬 개발 및 검증
 

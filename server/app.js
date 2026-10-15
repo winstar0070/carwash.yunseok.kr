@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { parseBackup } from "../backup-data.js";
+import { listCatalog, getCatalogProduct } from "./catalog.js";
 
 class ApiError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -80,6 +81,13 @@ export function createApp(db, { origin, rpID }) {
       if (request.headers.has("origin") && request.headers.get("origin") !== origin) throw new ApiError(403, "허용되지 않은 출처입니다.");
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Vary": "Origin" } });
       if (path === "/api/health" && request.method === "GET") return response({ ok: true });
+      if (path === "/api/products" || path.startsWith("/api/products/")) {
+        if (request.method !== "GET") throw new ApiError(405, "공용 제품 카탈로그는 조회만 가능합니다.");
+        if (path === "/api/products") return response(await listCatalog(db));
+        const product = await getCatalogProduct(db, path.slice("/api/products/".length));
+        if (!product) throw new ApiError(404, "제품을 찾을 수 없습니다.");
+        return response(product);
+      }
       (await db.run("DELETE FROM sessions WHERE expires_at < ?", Date.now()));
       (await db.run("DELETE FROM challenges WHERE expires_at < ?", Date.now()));
       (await db.run("DELETE FROM rate_limits WHERE expires_at < ?", Date.now()));
