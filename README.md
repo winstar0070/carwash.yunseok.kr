@@ -13,11 +13,40 @@
   - 1:5 (휠/타이어), 1:10 (APC/폼랜스), 1:20~30 (프리워시), 1:300~1000 (카샴푸) 퀵 칩 및 직접 입력
 - **실시간 계량컵 눈금 가이드 & 환산**:
   - 30ml / 50ml / 100ml / 250ml 계량컵 기준 눈금 채움 시각화
-  - 소분 캡 횟수, 디스펜서 펌프(2ml / 5ml) 횟수, 혼합 후 총 용량 동시 안내
+  - 소분 캡 횟수, 제품별 펌프 횟수, 혼합 후 총 용량 동시 안내
 - **내 케미컬 보관함 (`localStorage`)**:
   - 자주 사용하는 카샴푸·프리워시·APC 등의 이름, 분류, 권장 희석비율, 기본 물 용량, 메모를 브라우저에 저장하고 터치 한 번으로 불러오기
 
-## 홈 화면 설치와 오프라인 사용
+## 제품별 펌프와 백업
+
+- 계산 결과 아래에 펌프 1회 토출량(ml)을 입력하면 횟수를 계산합니다. 프리셋에도 제품별 토출량을 저장할 수 있습니다.
+- 정수 횟수로 부족한 원액은 별도 계량량으로 표시합니다. 예: 원액 36ml, 펌프 5ml/회 → 7회 + 1ml 별도 계량. 반 펌프나 임의 반올림을 가정하지 않습니다.
+- ‘제품 목록 백업 · 불러오기’에서 JSON 파일을 내보내고 다른 기기로 옮길 수 있습니다. 불러오기는 미리보기와 확인을 거치며 기존 목록을 유지하고 동일 항목을 건너뜁니다.
+- 기본 데이터는 이 브라우저에 저장됩니다. 패스키 보관함을 열면 서버에 동기화할 수 있습니다. 브라우저 데이터 삭제 전에 대기 중인 변경사항을 동기화하거나 백업하세요.
+- 직접 작성한 목록도 아래 형식의 JSON 파일로 불러올 수 있습니다. 제품명만으로 권장 비율이나 펌프 토출량을 추정하지 않습니다.
+
+```json
+{
+  "format": "carwash-presets",
+  "version": 1,
+  "presets": [
+    { "name": "내 카샴푸", "category": "카샴푸", "ratio": 500, "waterL": 15, "pumpMl": 2, "note": "직접 확인한 설정" }
+  ]
+}
+```
+
+프리셋 예시 값은 파일 형식 설명용입니다. 실제 제품 안내에 맞게 입력하세요. 펌프를 사용하지 않는 제품은 `pumpMl`을 생략하거나 `null`로 지정합니다.
+백업 검증: `npm test`.
+
+## 패스키 보관함과 동기화
+
+- 이름·이메일·비밀번호 없이 패스키를 등록합니다. 서버는 무작위 보관함 ID, 패스키 공개키, 제품 목록을 PostgreSQL에 저장합니다.
+- 처음 연결할 때 기기·서버 목록을 합치거나 사용할 목록을 선택합니다. 이후 변경사항은 자동 저장하며, 다른 기기에서 수정한 경우 선택 화면을 표시합니다.
+- 오프라인 변경사항은 보관함별로 기기에 대기시킵니다. 다시 연결하면 저장하며 충돌 시 자동으로 덮어쓰지 않습니다. 로그아웃하면 기존 비회원 목록을 복원합니다.
+- 보관함을 만들 때 복구 코드가 표시됩니다. 별도 파일로 보관하세요. 서버에는 코드의 해시만 저장합니다. 복구 시 기존 세션·패스키를 해제하고 새 코드를 발급하므로 패스키를 다시 추가해야 합니다.
+- 패스키를 분실하고 복구 코드도 없으면 보관함을 복구할 수 없습니다. 패스키 자체는 제품 데이터를 백업하거나 동기화하지 않습니다.
+
+## 오프라인 및 설치
 
 - 처음 온라인으로 접속하면 계산기 파일이 기기에 저장됩니다. 하단 ‘홈 화면에 추가 · 오프라인 사용’을 펼쳐 준비 완료를 확인하세요.
 - Android: 브라우저의 ‘앱 설치’ 또는 ‘홈 화면에 추가’. 설치를 지원하는 브라우저에서는 페이지 안에도 설치 버튼이 나타납니다.
@@ -29,18 +58,59 @@
 
 ## Cloudflare Pages 배포 설정
 
-별도의 빌드 도구 없이 순수 HTML/CSS/JS로 작동하므로 Cloudflare Pages에 바로 연결해 배포할 수 있습니다.
+프런트엔드는 정적 파일로 배포합니다. 빌드는 패스키 브라우저 라이브러리를 묶으며 서버 코드는 출력 폴더에 포함하지 않습니다.
 
 - **프레임워크 프리셋 (Framework preset)**: `None`
-- **빌드 명령어 (Build command)**: *(비워둠)*
-- **빌드 출력 디렉터리 (Build output directory)**: `/` (또는 `.`)
+- **빌드 명령어 (Build command)**: `npm run build`
+- **빌드 출력 디렉터리 (Build output directory)**: `dist`
+- **환경 변수**: `CARWASH_API_BASE=https://api.carwash.yunseok.kr/api`
+- API는 프런트엔드와 같은 사이트의 HTTPS 도메인으로 연결합니다. 예: `carwash.yunseok.kr` + `api.carwash.yunseok.kr`. 서로 다른 사이트에서는 세션 쿠키가 전달되지 않습니다.
+- 현재 화면에 ‘배포 명령’이 필수라면 Workers 설정입니다. Pages의 Git 연동 프로젝트를 생성하고 위 빌드·출력 폴더를 지정하세요.
 
-### 로컬 실행 또는 Wrangler CLI 배포
+## 별도 Docker 서버 실행
+
+Docker Compose로 Node API와 PostgreSQL 17을 함께 실행합니다. SQLite는 사용하지 않습니다. 데이터베이스 포트는 외부에 노출하지 않으며 API는 호스트의 `127.0.0.1:8787`에 연결됩니다.
+
+`.env.example`을 `.env`로 복사한 뒤 `POSTGRES_PASSWORD`에 직접 생성한 긴 임의 값을 넣으세요. 연결 URL에 안전하게 넣으려면 `openssl rand -hex 32`로 생성한 값을 사용하세요. `.env`는 커밋하지 않습니다.
+
+```dotenv
+POSTGRES_PASSWORD=직접_생성한_임의의_16진수_값
+ORIGIN=https://carwash.yunseok.kr
+RP_ID=carwash.yunseok.kr
+```
 
 ```bash
-# 로컬 미리보기
-npx wrangler pages dev .
-
-# Cloudflare Pages 직접 배포
-npx wrangler pages deploy . --project-name=carwash
+docker compose up -d --build
+docker compose ps
+curl http://127.0.0.1:8787/api/health
 ```
+
+리버스 프록시에서 `https://api.carwash.yunseok.kr`를 `http://127.0.0.1:8787`로 연결하고 `/api/...` 경로를 그대로 전달하세요. `ORIGIN`은 프런트엔드 주소(끝 슬래시 없음), `RP_ID`는 그 호스트명입니다. 이미 등록한 패스키를 유지하려면 RP_ID를 바꾸지 마세요. 프록시가 다른 컨테이너라면 같은 Docker 네트워크의 `api:8787`로 연결합니다.
+
+데이터는 `carwash-data` 볼륨에 영구 저장되며 시작 시 스키마를 적용합니다. 운영 시 별도로 DB 백업을 보관하세요. 다음 명령은 실행한 폴더에 백업 파일을 만듭니다.
+
+```bash
+docker compose exec -T db pg_dump -U carwash carwash > carwash-backup.sql
+```
+
+요청 제한은 직접 연결 주소 기준입니다. 리버스 프록시 뒤에서는 방문자가 제한을 공유하므로 공개 운영 규모에 맞춰 프록시에서도 요청 제한을 설정하세요.
+
+## 로컬 개발 및 검증
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+# .env의 ORIGIN=http://localhost:8766, RP_ID=localhost로 설정
+docker compose up -d --build
+CARWASH_API_BASE=http://localhost:8787/api pnpm build
+python3 -m http.server 8766 --directory dist
+```
+
+별도 터미널에서 실행합니다. 통합 테스트는 테스트 전용 PostgreSQL 연결을 요구하며 임시로 생성한 보관함을 정리합니다.
+
+```bash
+pnpm test
+TEST_DATABASE_URL=postgres://사용자:비밀번호@테스트DB호스트:5432/테스트DB pnpm test:api
+```
+
+통합 테스트는 실제 공개키 검증을 수행하는 소프트웨어 인증기를 사용합니다. 기기별 지문·Face ID·보안 키의 실제 등록 및 설치 동작은 지원 브라우저에서 확인해야 합니다.

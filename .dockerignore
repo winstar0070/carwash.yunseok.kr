@@ -1,0 +1,8 @@
+node_modules
+.git
+.impeccable
+dist
+data
+tests
+.env
+.dev.vars

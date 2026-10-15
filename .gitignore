@@ -3,3 +3,9 @@
 .impeccable/build/
 .impeccable/config.local.json
 .DS_Store
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.env
+data/

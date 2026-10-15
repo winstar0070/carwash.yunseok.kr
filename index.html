@@ -11,6 +11,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="세차 계산기" />
   <script src="/pwa.js" defer></script>
+  <script src="/backup.js" type="module"></script>
+  <script src="/config.js"></script>
+  <script src="/sync.js" type="module"></script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFFFFF'/%3E%3Cpath d='M16 5C16 5 8 14.2 8 20a8 8 0 0 0 16 0c0-5.8-8-15-8-15Z' fill='%23171717'/%3E%3Cpath d='M13 21a3 3 0 0 0 3 3' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
@@ -80,6 +83,24 @@
     .concentration-field { height: 54px; }
     .concentration-help { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
     .concentration-error { margin-top: 8px; font-size: 12px; color: var(--accent-danger); }
+    .pump-setting { margin: 18px 0; }
+    .pump-setting label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-secondary); }
+    .pump-setting input { width: 100px; }
+    .pump-dose { margin-top: 10px; font-size: 16px; font-weight: 600; }
+    .field-help { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+    .backup-panel { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
+    .backup-panel summary { cursor: pointer; padding: 10px 0; color: var(--text-primary); }
+    .backup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .backup-file-label { display: inline-flex; align-items: center; cursor: pointer; }
+    .backup-file-label:focus-within { outline: 2px solid var(--text-primary); outline-offset: 3px; }
+    .file-input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+    .backup-status { margin-top: 8px; overflow-wrap: anywhere; }
+    .sync-panel { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
+    .sync-panel summary { cursor: pointer; padding: 10px 0; color: var(--text-primary); }
+    .sync-panel p { margin: 8px 0; }
+    .sync-panel textarea { width: 100%; min-height: 80px; resize: vertical; padding: 10px; overflow-wrap: anywhere; }
+    .sync-panel .text-input { font-size: 16px; }
+    .backup-panel, .sync-panel, .field-help, .pump-dose { word-break: keep-all; overflow-wrap: anywhere; }
     .readout-surface { border-top: 1px solid var(--border-subtle); padding-top: 24px; }
     .readout-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .result-heading { font-size: 16px; font-weight: 650; }
@@ -328,6 +349,12 @@
               <span id="activeChemicalName">직접 계산 (물 15L · 1:500)</span>
             </div>
 
+          <div class="pump-setting" id="pumpSetting">
+            <label for="pumpMlInput">펌프 1회 토출량 (ml)
+              <input type="number" id="pumpMlInput" class="text-input" min="0" max="1000" step="any" inputmode="decimal" placeholder="예: 2" aria-describedby="pumpDoseText" />
+            </label>
+            <p class="pump-dose" id="pumpDoseText" aria-live="polite">토출량을 입력하면 필요한 펌프 횟수를 알려드려요.</p>
+          </div>
           <details class="measuring-details">
             <summary>계량컵·펌프 환산 보기</summary>
           <div class="cylinder-box">
@@ -360,7 +387,7 @@
               <div class="conversion-val" id="capConversionText">30ml 컵 1번</div>
             </div>
             <div class="conversion-item">
-              <div class="conversion-label">디스펜서 펌프 (2ml/5ml)</div>
+              <div class="conversion-label">펌프 투입 안내</div>
               <div class="conversion-val" id="pumpConversionText">15회 / 6회</div>
             </div>
             <div class="conversion-item">
@@ -407,6 +434,7 @@
                 <option value="휠/타이어">휠/타이어</option>
                 <option value="다목적(APC)">다목적(APC)</option>
                 <option value="코팅/드라잉">코팅/드라잉</option>
+                <option value="기타">기타</option>
               </select>
             </div>
             <div class="form-field">
@@ -421,10 +449,15 @@
             </div>
             <div class="form-field">
               <label for="presetNoteInput">메모 (선택)</label>
-              <input type="text" id="presetNoteInput" class="text-input" placeholder="예: 1펌프=2ml" maxlength="30" />
+              <input type="text" id="presetNoteInput" class="text-input" placeholder="예: 오염이 심할 때만 사용" maxlength="30" />
             </div>
           </div>
           <p class="form-error" id="presetFormError">케미컬 이름과 올바른 물 용량·희석비율을 입력해 주세요.</p>
+          <div class="form-field" id="presetPumpField">
+            <label for="presetPumpInput">펌프 1회 토출량 (ml · 선택)</label>
+            <input type="number" id="presetPumpInput" class="text-input" min="0" max="1000" step="any" inputmode="decimal" placeholder="예: 한 번 누를 때 2ml" aria-describedby="presetPumpHelp" />
+            <p class="field-help" id="presetPumpHelp">제품이나 펌프에 표시된 양을 입력하세요. 모르면 비워 두세요.</p>
+          </div>
           <div class="form-actions">
             <button type="button" class="btn-ghost" id="cancelPresetFormBtn">취소</button>
             <button type="submit" class="btn-primary" id="submitPresetFormBtn">보관함에 저장</button>
@@ -437,6 +470,65 @@
           <span>이 기기의 브라우저에 저장됩니다.</span>
           <button type="button" class="reset-defaults-btn" id="resetPresetsBtn">기본 목록 복원</button>
         </div>
+        <details class="backup-panel" id="backupPanel">
+          <summary>제품 목록 백업 · 불러오기</summary>
+          <p>제품 목록을 JSON 파일로 보관하거나 다른 기기로 옮겨 사용할 수 있어요.</p>
+          <div class="backup-actions">
+            <button type="button" class="btn-ghost" id="exportBackupBtn">백업 내보내기</button>
+            <label class="btn-ghost backup-file-label">백업 파일 선택
+              <input type="file" class="file-input" id="backupFileInput" accept=".json,application/json" />
+            </label>
+          </div>
+          <div id="backupPreview" hidden>
+            <p id="backupPreviewNames"></p>
+            <div class="backup-actions">
+              <button type="button" class="btn-primary" id="applyBackupBtn">이 목록 추가하기</button>
+              <button type="button" class="btn-ghost" id="cancelBackupBtn">취소</button>
+            </div>
+          </div>
+          <p class="backup-status" id="backupStatus" role="status"></p>
+        </details>
+        <details class="sync-panel" id="syncPanel">
+          <summary id="vaultLabel">패스키로 내 보관함 열기</summary>
+          <p>이메일·이름 없이 제품과 펌프 설정을 다른 기기에서도 불러오세요.</p>
+          <div class="backup-actions" id="syncGuestActions">
+            <button type="button" class="btn-primary" id="createVaultBtn">내 보관함 만들기</button>
+            <button type="button" class="btn-ghost" id="openVaultBtn">패스키로 불러오기</button>
+          </div>
+          <div id="syncAccountActions" hidden>
+            <div class="backup-actions">
+              <button type="button" class="btn-ghost" id="refreshCloudBtn">최신 목록 확인</button>
+              <button type="button" class="btn-ghost" id="addPasskeyBtn">패스키 추가</button>
+              <button type="button" class="btn-ghost" id="rotateRecoveryBtn">복구 코드 재발급</button>
+              <button type="button" class="btn-ghost" id="logoutVaultBtn">보관함 닫기</button>
+            </div>
+          </div>
+          <div id="syncChoice" hidden>
+            <p id="syncChoiceText"></p>
+            <div class="backup-actions">
+              <button type="button" class="btn-primary" id="mergeCloudBtn">두 목록 합치기</button>
+              <button type="button" class="btn-ghost" id="useCloudBtn">서버 목록 사용</button>
+              <button type="button" class="btn-ghost" id="useLocalBtn">기기 목록으로 서버 덮어쓰기</button>
+            </div>
+          </div>
+          <div id="recoveryCodeBox" hidden>
+            <label for="recoveryCodeOutput">복구 코드 · 지금 별도로 보관해 주세요</label>
+            <textarea id="recoveryCodeOutput" class="text-input" readonly spellcheck="false"></textarea>
+            <p>패스키를 모두 잃었을 때 사용합니다. 다른 사람에게 공유하지 마세요.</p>
+            <div class="backup-actions">
+              <button type="button" class="btn-ghost" id="saveRecoveryBtn">복구 코드 파일 저장</button>
+              <button type="button" class="btn-ghost" id="hideRecoveryBtn">보관했어요</button>
+            </div>
+          </div>
+          <details>
+            <summary>패스키를 잃어버렸나요?</summary>
+            <label for="recoveryInput">복구 코드</label>
+            <input type="text" id="recoveryInput" class="text-input" autocomplete="off" spellcheck="false" />
+            <p>복구하면 기존 패스키와 접속은 해제됩니다. 새 패스키를 추가해 주세요.</p>
+            <button type="button" class="btn-ghost" id="recoverVaultBtn">복구 코드로 열기</button>
+          </details>
+          <p id="syncStatus" role="status">이 기기에 저장 중입니다.</p>
+        </details>
       </aside>
     </main>
     <footer class="app-install">
@@ -512,6 +604,7 @@
         unit: "L",
         ratio: 500,
         mixMode: "ratio",
+        pumpMl: null,
         cupMaxMl: 100,
         cupAutoMode: true,
         activePresetId: null,
@@ -528,6 +621,8 @@
       const cylinderTicks = document.getElementById("cylinderTicks");
       const capConversionText = document.getElementById("capConversionText");
       const pumpConversionText = document.getElementById("pumpConversionText");
+      const pumpMlInput = document.getElementById("pumpMlInput");
+      const pumpDoseText = document.getElementById("pumpDoseText");
       const totalVolumeText = document.getElementById("totalVolumeText");
       const ratioPercentageText = document.getElementById("ratioPercentageText");
 
@@ -561,6 +656,7 @@
       const presetRatioInput = document.getElementById("presetRatioInput");
       const presetWaterInput = document.getElementById("presetWaterInput");
       const presetNoteInput = document.getElementById("presetNoteInput");
+      const presetPumpInput = document.getElementById("presetPumpInput");
       const presetFormError = document.getElementById("presetFormError");
       const cancelPresetFormBtn = document.getElementById("cancelPresetFormBtn");
       const submitPresetFormBtn = document.getElementById("submitPresetFormBtn");
@@ -625,6 +721,7 @@
               state.ratio = saved.ratio;
             }
             if (saved && saved.mixMode === "percent") state.mixMode = "percent";
+            if (saved && Number.isFinite(saved.pumpMl) && saved.pumpMl > 0 && saved.pumpMl <= 1000) state.pumpMl = saved.pumpMl;
             if (saved && typeof saved.activePresetId === "string") {
               state.activePresetId = saved.activePresetId;
             }
@@ -636,7 +733,9 @@
 
       function saveStorage() {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.presets));
+          const serialized = JSON.stringify(state.presets);
+          const presetsChanged = localStorage.getItem(STORAGE_KEY) !== serialized;
+          localStorage.setItem(STORAGE_KEY, serialized);
           localStorage.setItem(
             STATE_KEY,
             JSON.stringify({
@@ -644,9 +743,11 @@
               unit: state.unit,
               ratio: state.ratio,
               mixMode: state.mixMode,
+              pumpMl: state.pumpMl,
               activePresetId: state.activePresetId
             })
           );
+          if (presetsChanged) window.dispatchEvent(new Event("carwash-presets-changed"));
         } catch (err) {
           // Ignore storage quota errors
         }
@@ -668,6 +769,7 @@
           unitLiterBtn.classList.remove("is-active");
         }
         ratioInput.value = state.ratio;
+        pumpMlInput.value = state.pumpMl ?? "";
         percentInput.value = Number((100 / (state.ratio + 1)).toPrecision(12));
         const percentMode = state.mixMode === "percent";
         ratioControls.hidden = percentMode;
@@ -687,6 +789,8 @@
         togglePresetFormBtn.disabled = invalidPercent;
         if (invalidPercent) {
           doseResultValue.textContent = "—";
+          pumpDoseText.textContent = "농도를 먼저 확인해 주세요.";
+          pumpConversionText.textContent = "—";
           formulaSummary.textContent = "올바른 농도를 입력해 주세요.";
           return;
         }
@@ -694,6 +798,7 @@
         const precision = doseMl < 10 ? 2 : doseMl < 100 ? 1 : 0;
         doseResultValue.textContent = formatNumber(doseMl, precision);
         doseResultUnit.textContent = "ml";
+        updatePumpDose(doseMl);
 
         const waterDisplay =
           state.unit === "L"
@@ -756,9 +861,7 @@
             capConversionText.textContent = `30ml 컵 ${formatNumber(cap30, 1)}회`;
           }
 
-          const pump2 = Math.round(doseMl / 2);
-          const pump5 = Number((doseMl / 5).toFixed(1));
-          pumpConversionText.textContent = `2ml ${pump2}회 · 5ml ${pump5}회`;
+          pumpConversionText.textContent = pumpDoseText.textContent;
 
           const totalMl = state.waterMl + doseMl;
           if (totalMl >= 1000) {
@@ -822,6 +925,7 @@
                   <div class="preset-meta">
                     <span>물 ${formatNumber(Number(item.waterL), 1)}L · 1:${formatNumber(Number(item.ratio), 6)}</span>
                     <span class="preset-dose-preview">→ 원액 ${doseFormatted}ml</span>
+                    ${item.pumpMl ? `<span>펌프 1회 ${formatNumber(Number(item.pumpMl), 3)}ml</span>` : ""}
                     ${item.note ? `<span>· ${escapeHtml(item.note)}</span>` : ""}
                   </div>
                 </div>
@@ -920,6 +1024,35 @@
         updateCalculations();
       }
 
+      function updatePumpDose(doseMl) {
+        const value = Number(pumpMlInput.value);
+        if (pumpMlInput.value === "") {
+          pumpMlInput.setAttribute("aria-invalid", "false");
+          pumpDoseText.textContent = "토출량을 입력하면 필요한 펌프 횟수를 알려드려요.";
+          return;
+        }
+        if (!Number.isFinite(value) || value <= 0 || value > 1000) {
+          pumpMlInput.setAttribute("aria-invalid", "true");
+          pumpDoseText.textContent = "1회 토출량은 0보다 크고 1,000ml 이하로 입력해 주세요.";
+          return;
+        }
+        pumpMlInput.setAttribute("aria-invalid", "false");
+        const count = Math.floor(doseMl / value + 1e-10);
+        const remainder = Math.max(0, doseMl - count * value);
+        pumpDoseText.textContent = count === 0
+          ? `펌프 1회보다 적어요. 원액 ${formatNumber(doseMl, 3)}ml를 별도로 계량하세요.`
+          : remainder < 1e-8
+            ? `펌프 ${formatNumber(count, 0)}회 (1회 ${formatNumber(value, 3)}ml)`
+            : `펌프 ${formatNumber(count, 0)}회 + 원액 ${formatNumber(remainder, 3)}ml 별도 계량`;
+      }
+
+      pumpMlInput.addEventListener("input", () => {
+        const value = Number(pumpMlInput.value);
+        if (pumpMlInput.value === "") state.pumpMl = null;
+        else if (Number.isFinite(value) && value > 0 && value <= 1000) state.pumpMl = value;
+        updateCalculations();
+      });
+
       ratioModeBtn.addEventListener("click", () => setMixMode("ratio"));
       percentModeBtn.addEventListener("click", () => setMixMode("percent"));
       percentInput.addEventListener("input", () => {
@@ -986,7 +1119,8 @@
       copyResultBtn.addEventListener("click", async () => {
         const doseMl = calculateDoseMl(state.waterMl, state.ratio);
         const waterL = formatNumber(state.waterMl / 1000, 2);
-        const copyText = `물 ${waterL}L (${formatNumber(state.waterMl, 0)}ml) 기준 1:${state.ratio} 희석 → 원액 ${formatNumber(doseMl, 1)}ml 투입`;
+        const pumpText = pumpMlInput.value !== "" && pumpMlInput.getAttribute("aria-invalid") !== "true" ? ` · ${pumpDoseText.textContent}` : "";
+        const copyText = `물 ${waterL}L (${formatNumber(state.waterMl, 0)}ml) 기준 1:${state.ratio} 희석 → 원액 ${formatNumber(doseMl, 1)}ml 투입${pumpText}`;
         try {
           await navigator.clipboard.writeText(copyText);
           copyBtnText.textContent = "복사됨";
@@ -1009,6 +1143,7 @@
           presetRatioInput.value = presetToEdit.ratio;
           presetWaterInput.value = presetToEdit.waterL;
           presetNoteInput.value = presetToEdit.note || "";
+          presetPumpInput.value = presetToEdit.pumpMl ?? "";
           submitPresetFormBtn.textContent = "수정 내용 저장";
         } else {
           editingPresetId.value = "";
@@ -1017,6 +1152,7 @@
           presetRatioInput.value = state.ratio;
           presetWaterInput.value = Number((state.waterMl / 1000).toFixed(2));
           presetNoteInput.value = "";
+          presetPumpInput.value = state.pumpMl ?? "";
           submitPresetFormBtn.textContent = "보관함에 저장";
         }
         presetForm.classList.add("is-open");
@@ -1046,28 +1182,31 @@
         const ratio = parseFloat(presetRatioInput.value);
         const waterL = parseFloat(presetWaterInput.value);
         const note = presetNoteInput.value.trim();
+        const pumpMl = presetPumpInput.value === "" ? null : Number(presetPumpInput.value);
 
-        if (!name || !Number.isFinite(ratio) || ratio <= 0 || !Number.isFinite(waterL) || waterL <= 0) {
+        if (!name || !Number.isFinite(ratio) || ratio <= 0 || !Number.isFinite(waterL) || waterL <= 0 || (pumpMl !== null && (!Number.isFinite(pumpMl) || pumpMl <= 0 || pumpMl > 1000))) {
           presetFormError.classList.add("is-visible");
+          presetFormError.textContent = "이름·물 용량·희석비율과 펌프 토출량(0 초과, 1,000ml 이하)을 확인해 주세요.";
           return;
         }
 
         const editId = editingPresetId.value;
         if (editId) {
           state.presets = state.presets.map((p) =>
-            p.id === editId ? { ...p, name, category, ratio, waterL, note } : p
+            p.id === editId ? { ...p, name, category, ratio, waterL, note, pumpMl } : p
           );
           state.activePresetId = editId;
           showToast(`'${name}' 프리셋을 수정했습니다`);
         } else {
           const newId = "preset-" + Date.now();
-          const newPreset = { id: newId, name, category, ratio, waterL, note };
+          const newPreset = { id: newId, name, category, ratio, waterL, note, pumpMl };
           state.presets.unshift(newPreset);
           state.activePresetId = newId;
           showToast(`'${name}' 프리셋을 보관함에 추가했습니다`);
         }
 
         state.waterMl = waterL * 1000;
+        state.pumpMl = pumpMl;
         state.ratio = ratio;
         state.cupAutoMode = true;
         closePresetForm();
@@ -1106,6 +1245,7 @@
 
         state.activePresetId = preset.id;
         state.waterMl = Number(preset.waterL) * 1000;
+        state.pumpMl = Number.isFinite(preset.pumpMl) && preset.pumpMl > 0 ? preset.pumpMl : null;
         state.ratio = Number(preset.ratio);
         state.cupAutoMode = true;
         syncInputsFromState();
@@ -1127,6 +1267,7 @@
         state.activePresetId = DEFAULT_PRESETS[0].id;
         state.waterMl = DEFAULT_PRESETS[0].waterL * 1000;
         state.ratio = DEFAULT_PRESETS[0].ratio;
+        state.pumpMl = DEFAULT_PRESETS[0].pumpMl ?? null;
         state.cupAutoMode = true;
         syncInputsFromState();
         updateCalculations();
@@ -1134,6 +1275,17 @@
       });
 
       // Initialize
+      window.addEventListener("carwash-presets-imported", () => {
+        loadStorage();
+        syncInputsFromState();
+        updateCalculations();
+      });
+      window.addEventListener("storage", (event) => {
+        if (event.key !== STORAGE_KEY) return;
+        loadStorage();
+        syncInputsFromState();
+        updateCalculations();
+      });
       loadStorage();
       syncInputsFromState();
       updateCalculations();

@@ -1,5 +1,5 @@
-const CACHE_NAME = "carwash-offline-v3";
-const APP_FILES = ["/", "/index.html", "/pwa.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
+const CACHE_NAME = "carwash-offline-v6";
+const APP_FILES = ["/", "/index.html", "/pwa.js", "/backup.js", "/backup-data.js", "/config.js", "/sync.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
@@ -21,6 +21,7 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== "GET") return;
+  if (url.pathname.startsWith("/api/")) return;
   if (request.mode === "navigate") {
     if (url.origin !== self.location.origin || !["/", "/index.html"].includes(url.pathname)) return;
     event.respondWith((async () => {
