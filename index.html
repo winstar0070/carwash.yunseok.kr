@@ -14,6 +14,7 @@
   <script src="/backup.js" type="module"></script>
   <script src="/config.js"></script>
   <script src="/sync.js" type="module"></script>
+  <script src="/catalog-picker.js" type="module"></script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFFFFF'/%3E%3Cpath d='M16 5C16 5 8 14.2 8 20a8 8 0 0 0 16 0c0-5.8-8-15-8-15Z' fill='%23171717'/%3E%3Cpath d='M13 21a3 3 0 0 0 3 3' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
@@ -43,6 +44,7 @@
       caret-color: #171717;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
     body { background: var(--bg-base); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
     ::selection { background: #dedede; color: #171717; }
     button, input, select { font: inherit; color: inherit; }
@@ -148,6 +150,17 @@
     .form-field label { font-size: 12px; color: var(--text-secondary); }
     .text-input, .select-input { width: 100%; min-width: 0; height: 44px; border: 1px solid #ccc; border-radius: var(--radius-sm); background: #fff; padding: 0 10px; font-size: 14px; }
     .text-input::placeholder { color: var(--text-muted); }
+    .catalog-results { max-height: 264px; overflow-y: auto; border-bottom: 1px solid var(--border-subtle); list-style: none; }
+    .catalog-option { min-height: 44px; padding: 10px; border-top: 1px solid var(--border-subtle); cursor: pointer; font-size: 14px; overflow-wrap: anywhere; }
+    .catalog-option[aria-selected="true"], .catalog-option:hover { background: var(--bg-elevated); }
+    .catalog-option small { display: block; font-size: 12px; color: var(--text-muted); }
+    .catalog-selection { border-top: 1px solid var(--border-subtle); padding-top: 14px; }
+    .catalog-selection:not([hidden]) { display: flex; flex-direction: column; gap: 14px; }
+    .catalog-source { font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
+    .catalog-source summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+    .catalog-source p { margin-bottom: 8px; }
+    .catalog-source a { color: inherit; text-underline-offset: 3px; }
+    .catalog-retry { align-self: flex-start; }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .btn-ghost { min-height: 44px; padding: 8px 16px; border-radius: var(--radius-sm); background: var(--bg-elevated); font-size: 13px; }
     .form-error { display: none; color: var(--accent-danger); font-size: 12px; }
@@ -421,9 +434,43 @@
           <div class="form-row">
             <div class="form-field">
               <label for="presetNameInput">케미컬 이름</label>
-              <input type="text" id="presetNameInput" class="text-input" placeholder="예: 카프로 리셋 카샴푸" maxlength="40" required />
+              <input type="text" id="presetNameInput" class="text-input" placeholder="제품명·브랜드로 검색하거나 직접 입력" maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="catalogResults" aria-describedby="catalogStatus" required />
+              <p class="field-help" id="catalogStatus" role="status">제품을 검색해 선택하면 확인된 희석비율을 불러와요. 직접 입력도 가능해요.</p>
+              <button type="button" class="btn-ghost catalog-retry" id="catalogRetry" hidden>제품 목록 다시 불러오기</button>
+              <ul class="catalog-results" id="catalogResults" role="listbox" aria-label="검색된 케미컬" hidden></ul>
             </div>
           </div>
+          <section class="catalog-selection" id="catalogSelection" aria-label="선택한 제품의 사용 설정" hidden>
+            <div class="form-field">
+              <label for="catalogVariant">판매 옵션</label>
+              <select class="select-input" id="catalogVariant"></select>
+            </div>
+            <div class="form-field">
+              <label for="catalogProfile">사용 방법 · 확인된 희석비율</label>
+              <select class="select-input" id="catalogProfile"></select>
+            </div>
+            <div class="form-field" id="catalogRatioChoiceField" hidden>
+              <label for="catalogRatioChoice">사용할 희석비율 선택</label>
+              <select class="select-input" id="catalogRatioChoice"></select>
+            </div>
+            <div class="form-field" id="catalogPumpChoiceField" hidden>
+              <label for="catalogPumpChoice">사용 중인 펌프 선택</label>
+              <select class="select-input" id="catalogPumpChoice"></select>
+              <p class="field-help" id="catalogPumpSummary">표시된 모델을 장착한 경우에만 선택하세요.</p>
+              <details class="catalog-source">
+                <summary>펌프 호환 조건 · 출처 확인</summary>
+                <p id="catalogPumpNote"></p>
+                <a id="catalogPumpSourceLink" target="_blank" rel="noopener noreferrer" hidden>펌프 사용 지침 원문 열기</a>
+              </details>
+            </div>
+            <details class="catalog-source" id="catalogSource" hidden>
+              <summary>등록된 사용 지침 · 출처 확인</summary>
+              <p id="catalogClaim"></p>
+              <p id="catalogEvidence"></p>
+              <p id="catalogChecked"></p>
+              <a id="catalogSourceLink" target="_blank" rel="noopener noreferrer" hidden>제품 사용 지침 원문 열기</a>
+            </details>
+          </section>
           <div class="form-row-split">
             <div class="form-field">
               <label for="presetCategoryInput">용도 분류</label>
@@ -439,20 +486,22 @@
             </div>
             <div class="form-field">
               <label for="presetRatioInput">희석 비율 (1:N)</label>
-              <input type="number" id="presetRatioInput" class="text-input" value="500" min="1" max="10000" inputmode="numeric" required />
+              <input type="number" id="presetRatioInput" class="text-input" value="500" min="0" max="1000000" step="any" inputmode="decimal" aria-describedby="catalogRatioHelp" required />
+              <p class="field-help" id="catalogRatioHelp" hidden></p>
             </div>
           </div>
           <div class="form-row-split">
             <div class="form-field">
               <label for="presetWaterInput">기본 물 용량 (L)</label>
-              <input type="number" id="presetWaterInput" class="text-input" value="15" min="0.1" max="200" step="0.1" inputmode="decimal" required />
+              <input type="number" id="presetWaterInput" class="text-input" value="15" min="0.1" max="1000" step="any" inputmode="decimal" aria-describedby="catalogWaterHelp" required />
+              <p class="field-help" id="catalogWaterHelp" hidden></p>
             </div>
             <div class="form-field">
               <label for="presetNoteInput">메모 (선택)</label>
-              <input type="text" id="presetNoteInput" class="text-input" placeholder="예: 오염이 심할 때만 사용" maxlength="30" />
+              <input type="text" id="presetNoteInput" class="text-input" placeholder="예: 오염이 심할 때만 사용" maxlength="300" />
             </div>
           </div>
-          <p class="form-error" id="presetFormError">케미컬 이름과 올바른 물 용량·희석비율을 입력해 주세요.</p>
+          <p class="form-error" id="presetFormError" role="alert">케미컬 이름과 올바른 물 용량·희석비율을 입력해 주세요.</p>
           <div class="form-field" id="presetPumpField">
             <label for="presetPumpInput">펌프 1회 토출량 (ml · 선택)</label>
             <input type="number" id="presetPumpInput" class="text-input" min="0" max="1000" step="any" inputmode="decimal" placeholder="예: 한 번 누를 때 2ml" aria-describedby="presetPumpHelp" />
@@ -1156,6 +1205,7 @@
           submitPresetFormBtn.textContent = "보관함에 저장";
         }
         presetForm.classList.add("is-open");
+        presetForm.dispatchEvent(new CustomEvent("carwash:preset-open"));
         presetNameInput.focus();
       }
 
@@ -1163,6 +1213,7 @@
         presetForm.classList.remove("is-open");
         presetFormError.classList.remove("is-visible");
         editingPresetId.value = "";
+        presetForm.dispatchEvent(new CustomEvent("carwash:preset-close"));
       }
 
       togglePresetFormBtn.addEventListener("click", () => {
@@ -1184,7 +1235,7 @@
         const note = presetNoteInput.value.trim();
         const pumpMl = presetPumpInput.value === "" ? null : Number(presetPumpInput.value);
 
-        if (!name || !Number.isFinite(ratio) || ratio <= 0 || !Number.isFinite(waterL) || waterL <= 0 || (pumpMl !== null && (!Number.isFinite(pumpMl) || pumpMl <= 0 || pumpMl > 1000))) {
+        if (!name || name.length > 80 || note.length > 300 || !Number.isFinite(ratio) || ratio <= 0 || ratio > 1000000 || !Number.isFinite(waterL) || waterL <= 0 || waterL > 1000 || (pumpMl !== null && (!Number.isFinite(pumpMl) || pumpMl <= 0 || pumpMl > 1000))) {
           presetFormError.classList.add("is-visible");
           presetFormError.textContent = "이름·물 용량·희석비율과 펌프 토출량(0 초과, 1,000ml 이하)을 확인해 주세요.";
           return;

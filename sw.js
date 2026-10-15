@@ -1,5 +1,5 @@
-const CACHE_NAME = "carwash-offline-v7";
-const APP_FILES = ["/", "/index.html", "/pwa.js", "/backup.js", "/backup-data.js", "/config.js", "/sync.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
+const CACHE_NAME = "carwash-offline-v8";
+const APP_FILES = ["/", "/index.html", "/pwa.js", "/backup.js", "/backup-data.js", "/catalog-picker.js", "/catalog-data.js", "/config.js", "/sync.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {

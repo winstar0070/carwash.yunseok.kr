@@ -4,7 +4,7 @@ import { build } from "esbuild";
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
-for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "backup.js", "backup-data.js", "config.js"]) {
+for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "backup.js", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js"]) {
   await mkdir(dirname(`dist/${file}`), { recursive: true });
   await cp(file, `dist/${file}`);
 }
