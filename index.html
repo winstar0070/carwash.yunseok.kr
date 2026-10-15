@@ -3,886 +3,149 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0B0D11" />
+  <meta name="theme-color" content="#FFFFFF" />
   <meta name="description" content="셀프 세차장 버킷·분무기 물 용량 기준 케미컬 원액 투입량(ml) 계산기 및 나만의 케미컬 프리셋 보관함" />
   <title>세차 희석비율 계산기 — carwash.yunseok.kr</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23151921'/%3E%3Cpath d='M16 5C16 5 8 14.2 8 20a8 8 0 0 0 16 0c0-5.8-8-15-8-15Z' fill='%233182F6'/%3E%3Cpath d='M13 21a3 3 0 0 0 3 3' stroke='%23EBF4FF' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFFFFF'/%3E%3Cpath d='M16 5C16 5 8 14.2 8 20a8 8 0 0 0 16 0c0-5.8-8-15-8-15Z' fill='%23171717'/%3E%3Cpath d='M13 21a3 3 0 0 0 3 3' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
   <style>
     :root {
-      --bg-base: #0B0D11;
-      --bg-surface: #151921;
-      --bg-elevated: #1D232E;
-      --bg-interactive: #252C3A;
-      --bg-interactive-hover: #2E3748;
-      --border-subtle: rgba(214, 226, 245, 0.09);
-      --border-focus: rgba(76, 154, 255, 0.6);
-
-      --text-primary: #F2F5FA;
-      --text-secondary: #B4C0D4;
-      --text-muted: #93A2B8;
-
-      --accent-blue: #1B64DA;
-      --accent-blue-hover: #1554B8;
-      --accent-blue-bright: #529DFF;
-      --accent-blue-soft: rgba(49, 130, 246, 0.16);
-      --accent-aqua: #20C997;
-      --accent-aqua-soft: rgba(32, 201, 151, 0.14);
-      --accent-danger: #F04452;
-
-      --radius-xl: 24px;
-      --radius-lg: 18px;
-      --radius-md: 12px;
-      --radius-sm: 10px;
-      --radius-pill: 999px;
-
-      --shadow-surface: 0 12px 32px -8px rgba(4, 7, 13, 0.65);
-      --shadow-float: 0 18px 40px -10px rgba(4, 7, 13, 0.8);
-      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-
-      --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-
-      color-scheme: dark;
-      caret-color: var(--accent-blue-bright);
-    }
-
-    ::selection {
-      background-color: rgba(49, 130, 246, 0.32);
-      color: var(--text-primary);
-    }
-
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: var(--bg-base);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--bg-interactive);
-      border-radius: var(--radius-pill);
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--bg-interactive-hover);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background-color: var(--bg-base);
-      color: var(--text-primary);
+      color-scheme: light;
+      --bg-base: #fff;
+      --bg-surface: #fff;
+      --bg-elevated: #f5f5f5;
+      --bg-interactive: #ededed;
+      --bg-interactive-hover: #e5e5e5;
+      --text-primary: #171717;
+      --text-secondary: #525252;
+      --text-muted: #626262;
+      --border-subtle: #e5e5e5;
+      --border-focus: #171717;
+      --accent-blue: #171717;
+      --accent-blue-hover: #333;
+      --accent-blue-bright: #171717;
+      --accent-blue-soft: #f2f2f2;
+      --accent-aqua: #171717;
+      --accent-danger: #b42318;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-family: var(--font-sans);
-      line-height: 1.5;
-      min-height: 100dvh;
-      overflow-x: hidden;
-      font-feature-settings: "tnum" 1;
-      font-variant-numeric: tabular-nums;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    button, input, select {
-      font-family: inherit;
-      font-variant-numeric: tabular-nums;
-      color: inherit;
-      border: none;
-      background: none;
-    }
-
-    button {
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.15s var(--ease-out-expo), background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-    }
-
-    button:active:not(:disabled) {
-      transform: scale(0.97);
-    }
-
-    :focus-visible {
-      outline: 2px solid var(--accent-blue-bright);
-      outline-offset: 2px;
-    }
-
-    /* Layout Shell */
-    .app-shell {
-      max-width: 1060px;
-      margin: 0 auto;
-      padding: 22px 16px 56px;
-    }
-
-    /* Top Bar */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding-bottom: 20px;
-      margin-bottom: 22px;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .brand-icon {
-      color: var(--accent-blue-bright);
-      flex-shrink: 0;
-    }
-
-    .brand-title {
-      font-size: 1.375rem;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: var(--text-primary);
-    }
-
-    .mode-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 7px 13px;
-      border-radius: var(--radius-pill);
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-
-    .mode-pill-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent-aqua);
-    }
-
-    /* Main Grid */
-    .workspace {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 18px;
-      align-items: start;
-    }
-
-    @media (min-width: 840px) {
-      .app-shell {
-        padding: 32px 28px 64px;
-      }
-
-      .workspace {
-        grid-template-columns: 1.12fr 0.88fr;
-        gap: 24px;
-      }
-    }
-
-    /* Primary Calculator Column */
-    .calc-column {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    /* Readout Display Surface */
-    .readout-surface {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-xl);
-      padding: 24px 22px 22px;
-      box-shadow: var(--shadow-surface);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .readout-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .active-chemical-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 6px 12px;
-      border-radius: var(--radius-pill);
-      background: var(--accent-blue-soft);
-      color: #99C6FF;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      max-width: 100%;
-    }
-
-    .active-chemical-badge span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .formula-summary {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    .readout-main {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 16px;
-      margin: 6px 0 20px;
-      flex-wrap: wrap;
-    }
-
-    .readout-value-wrap {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-    }
-
-    .readout-number {
-      font-size: clamp(3.25rem, 9vw, 4.5rem);
-      font-weight: 800;
-      letter-spacing: -0.035em;
-      line-height: 1.02;
-      color: var(--text-primary);
-    }
-
-    .readout-unit {
-      font-size: clamp(1.35rem, 4vw, 1.85rem);
-      font-weight: 700;
-      color: var(--accent-blue-bright);
-    }
-
-    .copy-result-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-secondary);
-      font-size: 0.8125rem;
-      font-weight: 600;
-    }
-
-    .copy-result-btn:hover {
-      background: var(--bg-interactive);
-      color: var(--text-primary);
-    }
-
-    /* Visual Cylinder & Dosing Gauge (Signature Move) */
-    .cylinder-box {
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      margin-bottom: 14px;
-    }
-
-    .cylinder-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 12px;
-      font-size: 0.8125rem;
-      color: var(--text-secondary);
-      flex-wrap: wrap;
-    }
-
-    .cylinder-scale-select {
-      display: inline-flex;
-      gap: 4px;
-      background: var(--bg-surface);
-      padding: 4px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .scale-btn {
-      padding: 5px 9px;
-      border-radius: 7px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .scale-btn.is-active {
-      background: var(--bg-interactive);
-      color: var(--text-primary);
-    }
-
-    .cylinder-meter {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .cylinder-track {
-      position: relative;
-      height: 18px;
-      background: var(--bg-surface);
-      border-radius: var(--radius-pill);
-      overflow: hidden;
-      border: 1px solid var(--border-subtle);
-      padding: 2px;
-    }
-
-    .cylinder-fill {
-      height: 100%;
-      width: 30%;
-      background: var(--accent-blue-bright);
-      border-radius: var(--radius-pill);
-      transition: width 0.35s var(--ease-out-expo), background-color 0.25s ease;
-    }
-
-    .cylinder-ticks {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 4px;
-    }
-
-    .cylinder-tick {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    /* Helper Conversion Chips */
-    .conversion-strip {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .conversion-item {
-      background: var(--bg-elevated);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      border: 1px solid var(--border-subtle);
-    }
-
-    .conversion-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-bottom: 3px;
-    }
-
-    .conversion-val {
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    /* Input Control Panels */
-    .control-group {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-xl);
-      padding: 22px 20px;
-      box-shadow: var(--shadow-surface);
-    }
-
-    .control-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .control-title {
-      font-size: 1.0625rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .unit-toggle {
-      display: inline-flex;
-      background: var(--bg-base);
-      padding: 4px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .unit-btn {
-      padding: 5px 11px;
-      border-radius: 7px;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .unit-btn.is-active {
-      background: var(--bg-interactive);
-      color: var(--text-primary);
-    }
-
-    .input-stepper-row {
-      display: grid;
-      grid-template-columns: 52px 1fr 52px;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-
-    .step-btn {
-      height: 54px;
-      border-radius: var(--radius-md);
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-primary);
-      font-size: 1.35rem;
-      font-weight: 600;
-      display: grid;
-      place-items: center;
-    }
-
-    .step-btn:hover {
-      background: var(--bg-interactive);
-    }
-
-    .number-field-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-      background: var(--bg-base);
-      border: 1.5px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      height: 54px;
-      padding: 0 16px;
-      transition: border-color 0.15s ease;
-    }
-
-    .number-field-wrap:focus-within {
-      border-color: var(--accent-blue-bright);
-    }
-
-    .ratio-prefix {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      margin-right: 4px;
-      user-select: none;
-    }
-
-    .number-input {
-      width: 100%;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      text-align: right;
-      padding-right: 6px;
-      outline: none;
-    }
-
-    .number-input::-webkit-outer-spin-button,
-    .number-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    .number-input[type=number] {
-      -moz-appearance: textfield;
-    }
-
-    .field-suffix {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      user-select: none;
-      flex-shrink: 0;
-    }
-
-    /* Quick Preset Chips */
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-    }
-
-    @media (max-width: 480px) {
-      .conversion-strip {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .quick-chip {
-      min-height: 48px;
-      padding: 6px 8px;
-      border-radius: var(--radius-md);
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      line-height: 1.2;
-    }
-
-    .quick-chip small {
-      font-size: 0.6875rem;
-      font-weight: 500;
-      color: var(--text-muted);
-    }
-
-    .quick-chip:hover {
-      background: var(--bg-interactive);
-      color: var(--text-primary);
-    }
-
-    .quick-chip.is-active {
-      background: var(--accent-blue-soft);
-      border-color: var(--border-focus);
-      color: #99C6FF;
-    }
-
-    .quick-chip.is-active small {
-      color: #99C6FF;
-    }
-
-    /* Right Column: Personal Chemical Shelf */
-    .shelf-column {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-xl);
-      padding: 22px 20px;
-      box-shadow: var(--shadow-surface);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .shelf-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .shelf-title-wrap h2 {
-      font-size: 1.0625rem;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .shelf-title-wrap p {
-      font-size: 0.8125rem;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
-
-    .save-current-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      background: var(--accent-blue);
-      color: #FFFFFF;
-      font-size: 0.8125rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .save-current-btn:hover {
-      background: var(--accent-blue-hover);
-    }
-
-    /* Inline Add/Edit Preset Form */
-    .preset-form {
-      background: var(--bg-base);
-      border: 1px solid var(--border-focus);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      display: none;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .preset-form.is-open {
-      display: flex;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-
-    .form-row-split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .form-field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .form-field label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    .text-input, .select-input {
-      height: 42px;
-      padding: 0 12px;
-      border-radius: var(--radius-sm);
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-primary);
-      font-size: 0.875rem;
-      font-weight: 600;
-      outline: none;
-    }
-
-    .text-input:focus, .select-input:focus {
-      border-color: var(--accent-blue-bright);
-    }
-
-    .text-input::placeholder {
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .btn-ghost {
-      padding: 9px 14px;
-      border-radius: var(--radius-sm);
-      background: var(--bg-elevated);
-      color: var(--text-secondary);
-      font-size: 0.8125rem;
-      font-weight: 600;
-    }
-
-    .btn-ghost:hover {
-      background: var(--bg-interactive);
-      color: var(--text-primary);
-    }
-
-    .btn-primary {
-      padding: 9px 16px;
-      border-radius: var(--radius-sm);
-      background: var(--accent-blue);
-      color: #FFFFFF;
-      font-size: 0.8125rem;
-      font-weight: 700;
-    }
-
-    .btn-primary:hover {
-      background: var(--accent-blue-hover);
-    }
-
-    .form-error {
-      font-size: 0.75rem;
-      color: var(--accent-danger);
-      display: none;
-    }
-
-    .form-error.is-visible {
-      display: block;
-    }
-
-    /* Preset List */
-    .preset-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .preset-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 14px 15px;
-      border-radius: var(--radius-lg);
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      transition: background-color 0.15s ease, border-color 0.15s ease;
-      cursor: pointer;
-    }
-
-    .preset-item:hover {
-      background: var(--bg-interactive);
-    }
-
-    .preset-item.is-selected {
-      background: var(--accent-blue-soft);
-      border-color: var(--border-focus);
-    }
-
-    .preset-info {
-      min-width: 0;
-      flex: 1;
-    }
-
-    .preset-name-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 3px;
-    }
-
-    .preset-category {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      flex-shrink: 0;
-    }
-
-    .preset-name {
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .preset-meta {
-      font-size: 0.8125rem;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .preset-dose-preview {
-      color: var(--accent-aqua);
-      font-weight: 700;
-    }
-
-    .preset-actions {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .icon-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      display: grid;
-      place-items: center;
-      color: var(--text-muted);
-    }
-
-    .icon-btn:hover {
-      background: rgba(240, 68, 82, 0.16);
-      color: var(--accent-danger);
-    }
-
-    .icon-btn.edit-btn:hover {
-      background: var(--bg-base);
-      color: var(--text-primary);
-    }
-
-    .empty-shelf {
-      text-align: center;
-      padding: 28px 16px;
-      border-radius: var(--radius-lg);
-      background: var(--bg-base);
-      border: 1px dashed var(--border-subtle);
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-    }
-
-    .empty-shelf button {
-      margin-top: 10px;
-      color: #99C6FF;
-      font-weight: 600;
-      font-size: 0.8125rem;
-      text-decoration: underline;
-      text-underline-offset: 4px;
-    }
-
-    /* Quick Reference Table Footer */
-    .shelf-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 10px;
-      border-top: 1px solid var(--border-subtle);
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    .reset-defaults-btn {
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    .reset-defaults-btn:hover {
-      color: var(--text-primary);
-    }
-
-    /* Toast Notification */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translate(-50%, 16px);
-      background: var(--bg-interactive);
-      color: var(--text-primary);
-      border: 1px solid var(--border-focus);
-      padding: 10px 18px;
-      border-radius: var(--radius-pill);
-      font-size: 0.875rem;
-      font-weight: 600;
-      box-shadow: var(--shadow-float);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.25s var(--ease-out-expo);
-      z-index: 50;
-    }
-
-    .toast.is-visible {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
+      caret-color: #171717;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg-base); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    ::selection { background: #dedede; color: #171717; }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; border: 0; background: none; transition: background-color .15s, color .15s; }
+    button:hover { background: var(--bg-elevated); }
+    button:disabled { opacity: .4; cursor: default; }
+    :focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
+    .app-shell { max-width: 720px; padding: 48px 28px 64px; margin: auto; }
+    .topbar { padding-bottom: 28px; margin-bottom: 32px; border-bottom: 1px solid var(--border-subtle); }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon { width: 20px; height: 20px; }
+    .brand-title { font-size: 23px; font-weight: 700; letter-spacing: -.03em; }
+    .page-description { margin-top: 8px; font-size: 14px; color: var(--text-secondary); }
+    .workspace, .calc-column { display: flex; flex-direction: column; }
+    .calc-column { gap: 28px; }
+    .control-header, .shelf-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .control-title, .shelf-title-wrap h2 { font-size: 16px; font-weight: 650; letter-spacing: -.02em; }
+    .unit-toggle { display: flex; gap: 2px; }
+    .unit-btn { min-height: 36px; padding: 4px 10px; color: var(--text-secondary); font-size: 13px; border-radius: var(--radius-sm); }
+    .unit-btn.is-active { background: var(--bg-elevated); color: var(--text-primary); font-weight: 650; }
+    .input-stepper-row { display: grid; grid-template-columns: 48px 1fr 48px; gap: 8px; }
+    .step-btn { background: var(--bg-elevated); border-radius: var(--radius-md); font-size: 23px; height: 54px; }
+    .step-btn:hover { background: var(--bg-interactive); }
+    .number-field-wrap { display: flex; align-items: center; border: 1px solid #ccc; border-radius: var(--radius-md); padding: 0 16px; min-width: 0; }
+    .number-field-wrap:focus-within { border-color: #171717; }
+    .number-input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; text-align: right; font-size: 24px; font-weight: 600; padding: 6px; }
+    .number-input::-webkit-inner-spin-button, .number-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .number-input[type=number] { -moz-appearance: textfield; }
+    .ratio-prefix { white-space: nowrap; font-size: 21px; color: var(--text-secondary); }
+    .field-suffix { color: var(--text-secondary); }
+    .quick-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 10px; }
+    .quick-chip { min-height: 44px; padding: 6px 2px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); }
+    .quick-chip small { display: none; }
+    .quick-chip.is-active { border-color: #171717; color: #fff; background: #171717; }
+    .formula-summary { color: var(--text-muted); font-size: 12px; }
+    .readout-surface { border-top: 1px solid var(--border-subtle); padding-top: 24px; }
+    .readout-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .result-heading { font-size: 16px; font-weight: 650; }
+    .readout-main { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0 12px; }
+    .readout-value-wrap { display: flex; align-items: baseline; gap: 8px; }
+    .readout-number { font-size: 64px; font-weight: 600; line-height: 1.2; letter-spacing: -.04em; }
+    .readout-unit { font-size: 23px; color: var(--text-secondary); }
+    .copy-result-btn { display: flex; align-items: center; gap: 6px; padding: 12px; color: var(--text-secondary); font-size: 13px; border-radius: var(--radius-sm); }
+    .active-chemical-badge { font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; margin-bottom: 18px; }
+    .active-chemical-badge svg { display: none; }
+    .measuring-details { border-top: 1px solid var(--border-subtle); padding-top: 14px; }
+    .measuring-details summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; padding: 8px 0; }
+    .cylinder-box { padding: 16px 0; }
+    .cylinder-header { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+    .cylinder-scale-select { display: flex; gap: 4px; }
+    .scale-btn { padding: 8px; min-height: 36px; border-radius: var(--radius-sm); font-size: 12px; }
+    .scale-btn.is-active { background: var(--bg-interactive); }
+    .cylinder-track { height: 8px; background: var(--bg-interactive); border-radius: 4px; overflow: hidden; }
+    .cylinder-fill { height: 100%; background: #171717; transition: width .2s; }
+    .cylinder-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .conversion-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; padding: 8px 0 16px; }
+    .conversion-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .conversion-val { font-size: 13px; font-weight: 600; }
+    .shelf-column { margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--border-subtle); }
+    .shelf-title-wrap p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .save-current-btn, .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #171717; color: #fff; font-size: 13px; font-weight: 550; padding: 10px 14px; min-height: 44px; border-radius: var(--radius-sm); white-space: nowrap; }
+    .save-current-btn:hover, .btn-primary:hover { background: #333; }
+    .preset-list { display: flex; flex-direction: column; }
+    .preset-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0; border-bottom: 1px solid var(--border-subtle); cursor: pointer; }
+    .preset-item:hover, .preset-item.is-selected { background: #f7f7f7; }
+    .preset-info { flex: 1; min-width: 0; }
+    .preset-name-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+    .preset-category { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+    .preset-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+    .preset-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--text-muted); font-size: 12px; }
+    .preset-dose-preview { color: var(--text-primary); font-weight: 600; }
+    .preset-actions { display: flex; flex-shrink: 0; }
+    .icon-btn { display: grid; place-items: center; width: 44px; height: 44px; color: var(--text-muted); border-radius: var(--radius-sm); }
+    .icon-btn:hover { color: var(--accent-danger); }
+    .icon-btn.edit-btn:hover { color: #171717; }
+    .preset-form { display: none; padding: 20px 0; border-bottom: 1px solid var(--border-subtle); }
+    .preset-form.is-open { display: flex; flex-direction: column; gap: 14px; }
+    .form-row-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .form-field label { font-size: 12px; color: var(--text-secondary); }
+    .text-input, .select-input { width: 100%; min-width: 0; height: 44px; border: 1px solid #ccc; border-radius: var(--radius-sm); background: #fff; padding: 0 10px; font-size: 14px; }
+    .text-input::placeholder { color: var(--text-muted); }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .btn-ghost { min-height: 44px; padding: 8px 16px; border-radius: var(--radius-sm); background: var(--bg-elevated); font-size: 13px; }
+    .form-error { display: none; color: var(--accent-danger); font-size: 12px; }
+    .form-error.is-visible { display: block; }
+    .empty-shelf { padding: 32px 0; text-align: center; color: var(--text-secondary); font-size: 14px; }
+    .empty-shelf button { display: block; margin: 12px auto 0; text-decoration: underline; text-underline-offset: 4px; }
+    .shelf-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-top: 18px; color: var(--text-muted); font-size: 11px; }
+    .reset-defaults-btn { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; font-size: 11px; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 8px); max-width: calc(100% - 32px); background: #171717; color: #fff; border-radius: var(--radius-md); padding: 12px 20px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; }
+    .toast.is-visible { opacity: 1; transform: translate(-50%,0); }
+    @media (max-width: 600px) {
+      .app-shell { padding: 28px 20px 40px; }
+      .topbar { margin-bottom: 24px; padding-bottom: 22px; }
+      .brand-title { font-size: 21px; }
+      .quick-grid { grid-template-columns: repeat(4,1fr); }
+      .quick-chip { min-height: 44px; }
+      .calc-column { gap: 24px; }
+      .readout-number { font-size: 56px; }
+      .readout-top { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .shelf-header { align-items: flex-start; }
+      .shelf-title-wrap p { max-width: 22ch; }
+      .preset-name-row { flex-wrap: wrap; gap: 2px 8px; }
+      .preset-actions { flex-direction: column; }
+      .conversion-strip { grid-template-columns: 1fr; gap: 12px; }
+      .conversion-item { display: flex; justify-content: space-between; gap: 8px; }
+      .number-input, .text-input, .select-input { font-size: 16px; }
+      .number-input { font-size: 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
   </style>
 </head>
 <body>
@@ -894,97 +157,27 @@
         </svg>
         <h1 class="brand-title">세차 희석비율 계산기</h1>
       </div>
-      <div class="mode-pill" title="실제 세차장에서 물을 먼저 받고 원액을 넣는 기준">
-        <span class="mode-pill-dot" aria-hidden="true"></span>
-        <span>물 용량 고정 기준</span>
-      </div>
+      <p class="page-description">물 용량과 희석비율을 입력하면 필요한 원액을 계산해요.</p>
     </header>
 
     <main class="workspace">
-      <!-- Left / Primary Calculator -->
       <section class="calc-column" aria-label="원액 용량 계산기">
-        <div class="readout-surface">
-          <div class="readout-top">
-            <div class="active-chemical-badge" id="activeChemicalBadge">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/>
-              </svg>
-              <span id="activeChemicalName">직접 계산 (물 15L · 1:500)</span>
-            </div>
-            <div class="formula-summary" id="formulaSummary">물 15,000ml ÷ 500</div>
-          </div>
-
-          <div class="readout-main">
-            <div class="readout-value-wrap" aria-live="polite">
-              <span class="readout-number" id="doseResultValue">30</span>
-              <span class="readout-unit" id="doseResultUnit">ml</span>
-            </div>
-            <button type="button" class="copy-result-btn" id="copyResultBtn" aria-label="계산 결과 복사">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              <span id="copyBtnText">결과 복사</span>
-            </button>
-          </div>
-
-          <!-- Signature Move: Real-time Measuring Cup Scale -->
-          <div class="cylinder-box">
-            <div class="cylinder-header">
-              <span id="cylinderCaption">계량컵 눈금 가이드 (100ml 컵 기준 30% 채움)</span>
-              <div class="cylinder-scale-select" role="group" aria-label="계량컵 최대 눈금 선택">
-                <button type="button" class="scale-btn" data-cup="30">30ml</button>
-                <button type="button" class="scale-btn" data-cup="50">50ml</button>
-                <button type="button" class="scale-btn is-active" data-cup="100">100ml</button>
-                <button type="button" class="scale-btn" data-cup="250">250ml</button>
-              </div>
-            </div>
-            <div class="cylinder-meter" aria-hidden="true">
-              <div class="cylinder-track">
-                <div class="cylinder-fill" id="cylinderFill"></div>
-              </div>
-              <div class="cylinder-ticks" id="cylinderTicks">
-                <span class="cylinder-tick">0</span>
-                <span class="cylinder-tick">25</span>
-                <span class="cylinder-tick">50</span>
-                <span class="cylinder-tick">75</span>
-                <span class="cylinder-tick">100ml</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="conversion-strip">
-            <div class="conversion-item">
-              <div class="conversion-label">계량컵 / 소분 뚜껑</div>
-              <div class="conversion-val" id="capConversionText">30ml 컵 1번</div>
-            </div>
-            <div class="conversion-item">
-              <div class="conversion-label">디스펜서 펌프 (2ml/5ml)</div>
-              <div class="conversion-val" id="pumpConversionText">15회 / 6회</div>
-            </div>
-            <div class="conversion-item">
-              <div class="conversion-label">원액 투입 후 총 용량</div>
-              <div class="conversion-val" id="totalVolumeText">15.03 L</div>
-            </div>
-          </div>
-        </div>
-
         <!-- Step 1: Water Volume -->
         <div class="control-group">
           <div class="control-header">
             <h2 class="control-title">
-              <span>버킷 · 분무기 물 용량</span>
+              <span>물 용량</span>
             </h2>
             <div class="unit-toggle" role="group" aria-label="물 용량 단위 선택">
-              <button type="button" class="unit-btn is-active" id="unitLiterBtn" data-unit="L">리터 (L)</button>
-              <button type="button" class="unit-btn" id="unitMlBtn" data-unit="ml">밀리리터 (ml)</button>
+              <button type="button" class="unit-btn is-active" id="unitLiterBtn" data-unit="L">L</button>
+              <button type="button" class="unit-btn" id="unitMlBtn" data-unit="ml">ml</button>
             </div>
           </div>
 
           <div class="input-stepper-row">
             <button type="button" class="step-btn" id="waterMinusBtn" aria-label="물 용량 감소">−</button>
             <label class="number-field-wrap" for="waterInput">
-              <input type="number" id="waterInput" class="number-input" value="15" min="0.1" max="200000" step="0.5" inputmode="decimal" />
+              <input type="number" id="waterInput" aria-label="물 용량" class="number-input" value="15" min="0.1" max="200000" step="0.5" inputmode="decimal" />
               <span class="field-suffix" id="waterUnitSuffix">L</span>
             </label>
             <button type="button" class="step-btn" id="waterPlusBtn" aria-label="물 용량 증가">+</button>
@@ -1030,7 +223,7 @@
         <div class="control-group">
           <div class="control-header">
             <h2 class="control-title">
-              <span>희석 비율 (원액 1 : 물 N)</span>
+              <span>희석비율 (원액 : 물)</span>
             </h2>
             <span class="formula-summary" id="ratioPercentageText">농도 약 0.20%</span>
           </div>
@@ -1039,7 +232,7 @@
             <button type="button" class="step-btn" id="ratioMinusBtn" aria-label="희석 비율 감소">−</button>
             <label class="number-field-wrap" for="ratioInput">
               <span class="ratio-prefix">1 :</span>
-              <input type="number" id="ratioInput" class="number-input" value="500" min="1" max="10000" step="10" inputmode="numeric" />
+              <input type="number" id="ratioInput" aria-label="희석비율의 물 비율" class="number-input" value="500" min="1" max="10000" step="10" inputmode="numeric" />
             </label>
             <button type="button" class="step-btn" id="ratioPlusBtn" aria-label="희석 비율 증가">+</button>
           </div>
@@ -1079,14 +272,83 @@
             </button>
           </div>
         </div>
+        <div class="readout-surface">
+          <div class="readout-top">
+            <h2 class="result-heading">넣을 원액</h2>
+            <div class="formula-summary" id="formulaSummary">물 15,000ml ÷ 500</div>
+          </div>
+
+          <div class="readout-main">
+            <div class="readout-value-wrap" aria-live="polite">
+              <span class="readout-number" id="doseResultValue">30</span>
+              <span class="readout-unit" id="doseResultUnit">ml</span>
+            </div>
+            <button type="button" class="copy-result-btn" id="copyResultBtn" aria-label="계산 결과 복사">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copyBtnText">결과 복사</span>
+            </button>
+          </div>
+
+            <div class="active-chemical-badge" id="activeChemicalBadge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/>
+              </svg>
+              <span id="activeChemicalName">직접 계산 (물 15L · 1:500)</span>
+            </div>
+
+          <details class="measuring-details">
+            <summary>계량컵·펌프 환산 보기</summary>
+          <div class="cylinder-box">
+            <div class="cylinder-header">
+              <span id="cylinderCaption">계량컵 눈금 가이드 (100ml 컵 기준 30% 채움)</span>
+              <div class="cylinder-scale-select" role="group" aria-label="계량컵 최대 눈금 선택">
+                <button type="button" class="scale-btn" data-cup="30">30ml</button>
+                <button type="button" class="scale-btn" data-cup="50">50ml</button>
+                <button type="button" class="scale-btn is-active" data-cup="100">100ml</button>
+                <button type="button" class="scale-btn" data-cup="250">250ml</button>
+              </div>
+            </div>
+            <div class="cylinder-meter" aria-hidden="true">
+              <div class="cylinder-track">
+                <div class="cylinder-fill" id="cylinderFill"></div>
+              </div>
+              <div class="cylinder-ticks" id="cylinderTicks">
+                <span class="cylinder-tick">0</span>
+                <span class="cylinder-tick">25</span>
+                <span class="cylinder-tick">50</span>
+                <span class="cylinder-tick">75</span>
+                <span class="cylinder-tick">100ml</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conversion-strip">
+            <div class="conversion-item">
+              <div class="conversion-label">계량컵 / 소분 뚜껑</div>
+              <div class="conversion-val" id="capConversionText">30ml 컵 1번</div>
+            </div>
+            <div class="conversion-item">
+              <div class="conversion-label">디스펜서 펌프 (2ml/5ml)</div>
+              <div class="conversion-val" id="pumpConversionText">15회 / 6회</div>
+            </div>
+            <div class="conversion-item">
+              <div class="conversion-label">원액 투입 후 총 용량</div>
+              <div class="conversion-val" id="totalVolumeText">15.03 L</div>
+            </div>
+          </div>
+          </details>
+        </div>
+
       </section>
 
-      <!-- Right / Personal Chemical Presets Shelf -->
       <aside class="shelf-column" aria-label="나만의 케미컬 프리셋 보관함">
         <div class="shelf-header">
           <div class="shelf-title-wrap">
-            <h2>내 케미컬 보관함</h2>
-            <p>자주 쓰는 세차 용품과 비율을 기기에 저장해 바로 불러오세요</p>
+            <h2>저장한 비율</h2>
+            <p>자주 쓰는 제품의 비율을 저장해 두세요.</p>
           </div>
           <button type="button" class="save-current-btn" id="togglePresetFormBtn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1143,8 +405,8 @@
         <div class="preset-list" id="presetList" role="list"></div>
 
         <div class="shelf-footer">
-          <span>이 브라우저(localStorage)에 자동 저장됨</span>
-          <button type="button" class="reset-defaults-btn" id="resetPresetsBtn">기본 추천 목록 복원</button>
+          <span>이 기기의 브라우저에 저장됩니다.</span>
+          <button type="button" class="reset-defaults-btn" id="resetPresetsBtn">기본 목록 복원</button>
         </div>
       </aside>
     </main>
