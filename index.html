@@ -6,6 +6,11 @@
   <meta name="theme-color" content="#FFFFFF" />
   <meta name="description" content="셀프 세차장 버킷·분무기 물 용량 기준 케미컬 원액 투입량(ml) 계산기 및 나만의 케미컬 프리셋 보관함" />
   <title>세차 희석비율 계산기 — carwash.yunseok.kr</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="세차 계산기" />
+  <script src="/pwa.js" defer></script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFFFFF'/%3E%3Cpath d='M16 5C16 5 8 14.2 8 20a8 8 0 0 0 16 0c0-5.8-8-15-8-15Z' fill='%23171717'/%3E%3Cpath d='M13 21a3 3 0 0 0 3 3' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
@@ -125,6 +130,11 @@
     .empty-shelf button { display: block; margin: 12px auto 0; text-decoration: underline; text-underline-offset: 4px; }
     .shelf-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-top: 18px; color: var(--text-muted); font-size: 11px; }
     .reset-defaults-btn { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; font-size: 11px; }
+    .app-install { margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
+    .app-install summary { cursor: pointer; padding: 10px 0; color: var(--text-primary); }
+    .app-install p { margin-top: 8px; }
+    .app-install .btn-primary { margin-top: 12px; }
+    [hidden] { display: none !important; }
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 8px); max-width: calc(100% - 32px); background: #171717; color: #fff; border-radius: var(--radius-md); padding: 12px 20px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; }
     .toast.is-visible { opacity: 1; transform: translate(-50%,0); }
     @media (max-width: 600px) {
@@ -410,6 +420,14 @@
         </div>
       </aside>
     </main>
+    <footer class="app-install">
+      <details>
+        <summary>홈 화면에 추가 · 오프라인 사용</summary>
+        <p id="installHelp">iPhone·iPad는 Safari 공유 메뉴에서 ‘홈 화면에 추가’를, Android는 브라우저 메뉴에서 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요.</p>
+        <button type="button" class="btn-primary" id="installAppBtn" hidden>앱 설치</button>
+        <p id="offlineStatus" role="status">오프라인 사용을 준비하고 있어요. 처음에는 인터넷 연결이 필요합니다.</p>
+      </details>
+    </footer>
   </div>
 
   <div class="toast" id="toastMessage" role="status" aria-live="polite"></div>
