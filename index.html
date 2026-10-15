@@ -151,7 +151,7 @@
     .text-input, .select-input { width: 100%; min-width: 0; height: 44px; border: 1px solid #ccc; border-radius: var(--radius-sm); background: #fff; padding: 0 10px; font-size: 14px; }
     .text-input::placeholder { color: var(--text-muted); }
     .catalog-results { max-height: 264px; overflow-y: auto; border-bottom: 1px solid var(--border-subtle); list-style: none; }
-    .catalog-option { min-height: 44px; padding: 10px; border-top: 1px solid var(--border-subtle); cursor: pointer; font-size: 14px; overflow-wrap: anywhere; }
+    .catalog-option { display: block; width: 100%; min-height: 44px; padding: 10px; border-top: 1px solid var(--border-subtle); cursor: pointer; font-size: 14px; text-align: left; overflow-wrap: anywhere; }
     .catalog-option[aria-selected="true"], .catalog-option:hover { background: var(--bg-elevated); }
     .catalog-option small { display: block; font-size: 12px; color: var(--text-muted); }
     .catalog-selection { border-top: 1px solid var(--border-subtle); padding-top: 14px; }
@@ -433,21 +433,29 @@
           <input type="hidden" id="editingPresetId" value="" />
           <div class="form-row">
             <div class="form-field">
-              <label for="presetNameInput">케미컬 이름</label>
-              <input type="text" id="presetNameInput" class="text-input" placeholder="제품명·브랜드로 검색하거나 직접 입력" maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="catalogResults" aria-describedby="catalogStatus" required />
-              <p class="field-help" id="catalogStatus" role="status">제품을 검색해 선택하면 확인된 희석비율을 불러와요. 직접 입력도 가능해요.</p>
+              <label for="catalogSearchInput">제품 검색</label>
+              <input type="text" id="catalogSearchInput" class="text-input" placeholder="브랜드·제품명으로 검색 후 제품 선택" maxlength="200" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="catalogResults" aria-describedby="catalogStatus" />
+              <p class="field-help" id="catalogStatus" role="status">검색 결과에서 제품을 선택하세요. 검색어는 제품명으로 저장되지 않아요.</p>
               <button type="button" class="btn-ghost catalog-retry" id="catalogRetry" hidden>제품 목록 다시 불러오기</button>
-              <ul class="catalog-results" id="catalogResults" role="listbox" aria-label="검색된 케미컬" hidden></ul>
+              <div class="catalog-results" id="catalogResults" role="listbox" aria-label="검색된 케미컬" hidden></div>
+              <button type="button" class="btn-ghost catalog-retry" id="catalogManual">직접 입력</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="presetNameInput">케미컬 이름</label>
+              <input type="text" id="presetNameInput" class="text-input" placeholder="제품을 선택하면 자동 입력 · 직접 입력 가능" maxlength="80" aria-describedby="presetNameHelp" required />
+              <p class="field-help" id="presetNameHelp">여기에 표시된 제품명이 저장됩니다.</p>
             </div>
           </div>
           <section class="catalog-selection" id="catalogSelection" aria-label="선택한 제품의 사용 설정" hidden>
             <div class="form-field">
               <label for="catalogVariant">판매 옵션</label>
-              <select class="select-input" id="catalogVariant"></select>
+              <select class="select-input" id="catalogVariant" aria-required="true"></select>
             </div>
             <div class="form-field">
               <label for="catalogProfile">사용 방법 · 확인된 희석비율</label>
-              <select class="select-input" id="catalogProfile"></select>
+              <select class="select-input" id="catalogProfile" aria-required="true"></select>
             </div>
             <div class="form-field" id="catalogRatioChoiceField" hidden>
               <label for="catalogRatioChoice">사용할 희석비율 선택</label>
@@ -1206,7 +1214,7 @@
         }
         presetForm.classList.add("is-open");
         presetForm.dispatchEvent(new CustomEvent("carwash:preset-open"));
-        presetNameInput.focus();
+        (presetToEdit ? presetNameInput : document.getElementById("catalogSearchInput")).focus();
       }
 
       function closePresetForm() {

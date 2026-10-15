@@ -2,6 +2,7 @@ import { METHODS, searchProducts, getProfiles, getRatioOptions, getPresetDefault
 
 const $ = id => document.getElementById(id);
 const form = $("presetForm");
+const search = $("catalogSearchInput");
 const name = $("presetNameInput");
 const results = $("catalogResults");
 const status = $("catalogStatus");
@@ -32,13 +33,15 @@ function setSourceLink(link, source) {
 
 function closeResults() {
   results.hidden = true;
-  name.setAttribute("aria-expanded", "false");
-  name.removeAttribute("aria-activedescendant");
+  search.setAttribute("aria-expanded", "false");
+  search.removeAttribute("aria-activedescendant");
   active = -1;
 }
 
 function clearSelection() {
   chosen = null;
+  name.readOnly = false;
+  $("catalogManual").textContent = "직접 입력";
   selection.hidden = true;
   $("catalogRatioHelp").hidden = true;
   $("catalogWaterHelp").hidden = true;
@@ -49,12 +52,14 @@ function clearSelection() {
 }
 
 function showMatches() {
-  if (!catalog || chosen || document.activeElement !== name || !form.classList.contains("is-open")) return;
-  matches = searchProducts(catalog.data.products, name.value);
+  if (!catalog || chosen || document.activeElement !== search || !form.classList.contains("is-open")) return;
+  matches = searchProducts(catalog.data.products, search.value);
   closeResults();
   results.replaceChildren();
   for (const [index, product] of matches.entries()) {
-    const option = document.createElement("li");
+    const option = document.createElement("button");
+    option.type = "button";
+    option.tabIndex = -1;
     option.className = "catalog-option";
     option.id = `catalog-option-${index}`;
     option.setAttribute("role", "option");
@@ -63,14 +68,14 @@ function showMatches() {
     const detail = document.createElement("small");
     detail.textContent = product.variants.length > 1 ? `${product.variants.length}개 판매 옵션 · 선택 후 용량 확인` : product.variants[0]?.option_name || "판매 옵션 확인";
     option.append(detail);
-    option.addEventListener("pointerdown", event => event.preventDefault());
+    option.addEventListener("mousedown", event => event.preventDefault());
     option.addEventListener("click", () => chooseProduct(product));
     results.append(option);
   }
   results.hidden = matches.length === 0;
-  name.setAttribute("aria-expanded", String(matches.length > 0));
+  search.setAttribute("aria-expanded", String(matches.length > 0));
   const prefix = catalog.cached ? "연결할 수 없어 마지막으로 받은 목록을 사용해요. " : "";
-  status.textContent = prefix + (!name.value.trim() ? "제품명·브랜드를 입력해 검색하세요. 직접 입력도 가능해요." : matches.length ? `${matches.length}개 검색 결과. 맞는 제품을 선택하세요. ↑↓ 키와 Enter로도 선택할 수 있어요.` : "일치하는 제품이 없어요. 다른 검색어를 입력하거나 직접 저장할 수 있어요.");
+  status.textContent = prefix + (!search.value.trim() ? "제품명·브랜드를 입력해 검색하세요. 직접 입력도 가능해요." : matches.length ? `${matches.length}개 검색 결과. 맞는 제품을 선택하세요. ↑↓ 키와 Enter로도 선택할 수 있어요.` : "일치하는 제품이 없어요. 검색어를 바꾸거나 ‘직접 입력’을 선택하세요.");
 }
 
 async function ensureCatalog() {
@@ -95,7 +100,11 @@ async function ensureCatalog() {
 function chooseProduct(product) {
   chosen = product;
   closeResults();
+  search.value = "";
   name.value = product.name;
+  name.readOnly = true;
+  $("catalogManual").textContent = "직접 입력으로 전환";
+  $("presetFormError").classList.remove("is-visible");
   ratio.value = "";
   water.value = "";
   pump.value = "";
@@ -104,7 +113,7 @@ function chooseProduct(product) {
   selection.hidden = false;
   setOptions(variant, product.variants.map(row => [row.variant_id, row.option_name + (row.volume_ml ? ` · ${row.volume_ml.toLocaleString("ko")}ml 용기` : "")]), product.variants.length === 1 ? null : "사용 중인 용량·옵션을 선택하세요");
   updateVariant();
-  status.textContent = "등록된 제품을 선택했어요. 판매 옵션과 사용 방법을 확인해 주세요.";
+  name.focus();
 }
 
 function updateVariant() {
@@ -131,7 +140,10 @@ function updateVariant() {
 function updateProfile() {
   const current = getProfiles(chosen, variant.value).find(row => row.profile_id === profile.value);
   const defaults = getPresetDefaults(chosen, variant.value, profile.value);
+  $("presetFormError").classList.remove("is-visible");
   name.value = defaults.name;
+  name.readOnly = true;
+  status.textContent = `선택한 제품: ${defaults.name}. 판매 옵션과 사용 방법을 확인하세요.`;
   ratio.value = defaults.ratio ?? "";
   ratio.disabled = defaults.fixedDose;
   water.readOnly = defaults.fixedDose;
@@ -156,13 +168,21 @@ function updateProfile() {
   setSourceLink($("catalogSourceLink"), source);
 }
 
-name.addEventListener("focus", ensureCatalog);
-name.addEventListener("input", () => {
-  if (chosen) { clearSelection(); ratio.value = ""; pump.value = ""; $("presetNoteInput").value = ""; }
+search.addEventListener("focus", ensureCatalog);
+search.addEventListener("input", () => {
+  clearSelection();
+  name.value = "";
+  ratio.value = "";
+  water.value = "";
+  pump.value = "";
+  $("presetNoteInput").value = "";
+  $("presetCategoryInput").value = "기타";
+  $("presetFormError").classList.remove("is-visible");
   if (catalog) showMatches(); else ensureCatalog();
 });
-name.addEventListener("blur", closeResults);
-name.addEventListener("keydown", event => {
+search.addEventListener("blur", event => { if (!results.contains(event.relatedTarget)) closeResults(); });
+results.addEventListener("focusout", event => { if (!results.contains(event.relatedTarget) && event.relatedTarget !== search) closeResults(); });
+search.addEventListener("keydown", event => {
   if (event.isComposing) return;
   if (event.key === "Escape") { closeResults(); return; }
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -171,12 +191,28 @@ name.addEventListener("keydown", event => {
     event.preventDefault();
     active = active < 0 ? (event.key === "ArrowDown" ? 0 : matches.length - 1) : (active + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length;
     for (const [index, option] of [...results.children].entries()) option.setAttribute("aria-selected", String(index === active));
-    name.setAttribute("aria-activedescendant", `catalog-option-${active}`);
+    search.setAttribute("aria-activedescendant", `catalog-option-${active}`);
     results.children[active].scrollIntoView({ block: "nearest" });
-  } else if (event.key === "Enter" && !results.hidden && active >= 0) {
+  } else if (event.key === "Enter") {
     event.preventDefault();
-    chooseProduct(matches[active]);
+    if (!results.hidden && matches.length) chooseProduct(matches[active < 0 ? 0 : active]);
+    else status.textContent = "검색 결과에서 제품을 선택하거나 ‘직접 입력’을 선택하세요.";
   }
+});
+name.addEventListener("input", () => {
+  clearSelection();
+  search.value = "";
+  $("presetFormError").classList.remove("is-visible");
+  status.textContent = "직접 입력 중이에요. 실제 제품명과 사용 지침을 확인해 저장하세요.";
+});
+$("catalogManual").addEventListener("click", () => {
+  const query = search.value.trim();
+  clearSelection();
+  search.value = "";
+  if (!name.value) name.value = query;
+  $("presetFormError").classList.remove("is-visible");
+  status.textContent = "직접 입력 중이에요. 실제 제품명과 사용 지침을 확인해 저장하세요.";
+  name.focus();
 });
 variant.addEventListener("change", updateVariant);
 profile.addEventListener("change", updateProfile);
@@ -184,6 +220,33 @@ ratioChoice.addEventListener("change", () => { ratio.value = ratioChoice.value; 
 ratio.addEventListener("input", () => { ratioChoice.value = ""; });
 pumpChoice.addEventListener("change", () => { pump.value = pumps[pumpChoice.value]?.pump_ml_min ?? ""; });
 pump.addEventListener("input", () => { pumpChoice.value = ""; });
-$("catalogRetry").addEventListener("click", async () => { await ensureCatalog(); name.focus(); });
-form.addEventListener("carwash:preset-open", clearSelection);
-form.addEventListener("carwash:preset-close", clearSelection);
+$("catalogRetry").addEventListener("click", async () => { await ensureCatalog(); search.focus(); });
+form.addEventListener("carwash:preset-open", () => {
+  clearSelection();
+  search.value = "";
+  status.textContent = $("editingPresetId").value ? "저장된 제품을 수정하고 있어요. 다른 제품을 검색하면 기존 입력을 초기화해요." : "검색 결과에서 제품을 선택하거나 케미컬 이름을 직접 입력하세요.";
+});
+form.addEventListener("carwash:preset-close", () => { clearSelection(); search.value = ""; });
+function blockSubmit(event, message, field) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  field.focus();
+  $("presetFormError").textContent = message;
+  $("presetFormError").classList.add("is-visible");
+}
+form.addEventListener("submit", event => {
+  if (chosen) {
+    if (!chosen.variants.some(row => row.variant_id === variant.value)) {
+      blockSubmit(event, "판매 옵션을 먼저 선택해 주세요.", variant);
+      return;
+    }
+    if (!getProfiles(chosen, variant.value).some(row => row.profile_id === profile.value)) {
+      blockSubmit(event, "사용 방법을 먼저 선택해 주세요. 직접 설정하려면 ‘직접 입력으로 전환’을 선택하세요.", profile);
+      return;
+    }
+    name.value = getPresetDefaults(chosen, variant.value, profile.value).name;
+  } else if (search.value.trim()) {
+    blockSubmit(event, "검색 결과에서 제품을 선택하거나 ‘직접 입력’으로 전환해 주세요.", search);
+    showMatches();
+  }
+}, { capture: true });
