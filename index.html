@@ -75,6 +75,11 @@
     .quick-chip small { display: none; }
     .quick-chip.is-active { border-color: #171717; color: #fff; background: #171717; }
     .formula-summary { color: var(--text-muted); font-size: 12px; }
+    .mix-mode { display: flex; gap: 4px; margin-bottom: 12px; }
+    .mix-mode .unit-btn { min-height: 44px; }
+    .concentration-field { height: 54px; }
+    .concentration-help { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+    .concentration-error { margin-top: 8px; font-size: 12px; color: var(--accent-danger); }
     .readout-surface { border-top: 1px solid var(--border-subtle); padding-top: 24px; }
     .readout-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .result-heading { font-size: 16px; font-weight: 650; }
@@ -233,16 +238,21 @@
         <div class="control-group">
           <div class="control-header">
             <h2 class="control-title">
-              <span>희석비율 (원액 : 물)</span>
+              <span>희석 설정</span>
             </h2>
             <span class="formula-summary" id="ratioPercentageText">농도 약 0.20%</span>
           </div>
 
+          <div class="mix-mode" role="group" aria-label="희석 설정 입력 방식">
+            <button type="button" class="unit-btn is-active" id="ratioModeBtn" aria-pressed="true">희석비율 (원액 : 물)</button>
+            <button type="button" class="unit-btn" id="percentModeBtn" aria-pressed="false">농도 (%)</button>
+          </div>
+          <div id="ratioControls">
           <div class="input-stepper-row">
             <button type="button" class="step-btn" id="ratioMinusBtn" aria-label="희석 비율 감소">−</button>
             <label class="number-field-wrap" for="ratioInput">
               <span class="ratio-prefix">1 :</span>
-              <input type="number" id="ratioInput" aria-label="희석비율의 물 비율" class="number-input" value="500" min="1" max="10000" step="10" inputmode="numeric" />
+              <input type="number" id="ratioInput" aria-label="희석비율의 물 비율" class="number-input" value="500" min="0" step="any" inputmode="decimal" />
             </label>
             <button type="button" class="step-btn" id="ratioPlusBtn" aria-label="희석 비율 증가">+</button>
           </div>
@@ -280,6 +290,15 @@
               <span>1 : 1000</span>
               <small>초고농축 샴푸</small>
             </button>
+          </div>
+          </div>
+          <div id="percentControls" hidden>
+            <label class="number-field-wrap concentration-field" for="percentInput">
+              <input type="number" id="percentInput" class="number-input" aria-label="완성액의 원액 농도" aria-describedby="percentHelp percentError" min="0" max="100" step="any" inputmode="decimal" required />
+              <span class="field-suffix">%</span>
+            </label>
+            <p class="concentration-help" id="percentHelp">완성액(물 + 원액)에서 원액이 차지하는 부피 비율이에요.</p>
+            <p class="concentration-error" id="percentError" role="status" hidden>0보다 크고 100보다 작은 농도를 입력해 주세요.</p>
           </div>
         </div>
         <div class="readout-surface">
@@ -492,6 +511,7 @@
         waterMl: 15000,
         unit: "L",
         ratio: 500,
+        mixMode: "ratio",
         cupMaxMl: 100,
         cupAutoMode: true,
         activePresetId: null,
@@ -520,6 +540,12 @@
       const waterQuickGrid = document.getElementById("waterQuickGrid");
 
       const ratioInput = document.getElementById("ratioInput");
+      const percentInput = document.getElementById("percentInput");
+      const percentError = document.getElementById("percentError");
+      const ratioModeBtn = document.getElementById("ratioModeBtn");
+      const percentModeBtn = document.getElementById("percentModeBtn");
+      const ratioControls = document.getElementById("ratioControls");
+      const percentControls = document.getElementById("percentControls");
       const ratioMinusBtn = document.getElementById("ratioMinusBtn");
       const ratioPlusBtn = document.getElementById("ratioPlusBtn");
       const ratioQuickGrid = document.getElementById("ratioQuickGrid");
@@ -598,6 +624,7 @@
             if (saved && typeof saved.ratio === "number" && saved.ratio > 0) {
               state.ratio = saved.ratio;
             }
+            if (saved && saved.mixMode === "percent") state.mixMode = "percent";
             if (saved && typeof saved.activePresetId === "string") {
               state.activePresetId = saved.activePresetId;
             }
@@ -616,6 +643,7 @@
               waterMl: state.waterMl,
               unit: state.unit,
               ratio: state.ratio,
+              mixMode: state.mixMode,
               activePresetId: state.activePresetId
             })
           );
@@ -640,9 +668,28 @@
           unitLiterBtn.classList.remove("is-active");
         }
         ratioInput.value = state.ratio;
+        percentInput.value = Number((100 / (state.ratio + 1)).toPrecision(12));
+        const percentMode = state.mixMode === "percent";
+        ratioControls.hidden = percentMode;
+        percentControls.hidden = !percentMode;
+        ratioModeBtn.classList.toggle("is-active", !percentMode);
+        percentModeBtn.classList.toggle("is-active", percentMode);
+        ratioModeBtn.setAttribute("aria-pressed", String(!percentMode));
+        percentModeBtn.setAttribute("aria-pressed", String(percentMode));
       }
 
       function updateCalculations() {
+        const percent = Number(percentInput.value);
+        const invalidPercent = state.mixMode === "percent" && (!Number.isFinite(percent) || percent <= 0 || percent >= 100);
+        percentError.hidden = !invalidPercent;
+        percentInput.setAttribute("aria-invalid", String(invalidPercent));
+        copyResultBtn.disabled = invalidPercent;
+        togglePresetFormBtn.disabled = invalidPercent;
+        if (invalidPercent) {
+          doseResultValue.textContent = "—";
+          formulaSummary.textContent = "올바른 농도를 입력해 주세요.";
+          return;
+        }
         const doseMl = calculateDoseMl(state.waterMl, state.ratio);
         const precision = doseMl < 10 ? 2 : doseMl < 100 ? 1 : 0;
         doseResultValue.textContent = formatNumber(doseMl, precision);
@@ -653,7 +700,9 @@
             ? `${formatNumber(state.waterMl / 1000, 2)}L (${formatNumber(state.waterMl, 0)}ml)`
             : `${formatNumber(state.waterMl, 0)}ml`;
 
-        formulaSummary.textContent = `물 ${waterDisplay} ÷ ${formatNumber(state.ratio, 0)}`;
+        formulaSummary.textContent = state.mixMode === "percent"
+          ? `물 ${waterDisplay} · 완성액 농도 ${formatNumber(100 / (state.ratio + 1), 6)}%`
+          : `물 ${waterDisplay} ÷ ${formatNumber(state.ratio, 6)}`;
 
         const activePreset = state.presets.find((p) => p.id === state.activePresetId);
         if (activePreset) {
@@ -771,7 +820,7 @@
                     <span class="preset-name">${escapeHtml(item.name)}</span>
                   </div>
                   <div class="preset-meta">
-                    <span>물 ${formatNumber(Number(item.waterL), 1)}L · 1:${formatNumber(Number(item.ratio), 0)}</span>
+                    <span>물 ${formatNumber(Number(item.waterL), 1)}L · 1:${formatNumber(Number(item.ratio), 6)}</span>
                     <span class="preset-dose-preview">→ 원액 ${doseFormatted}ml</span>
                     ${item.note ? `<span>· ${escapeHtml(item.note)}</span>` : ""}
                   </div>
@@ -865,6 +914,24 @@
       });
 
       // Ratio Input & Steppers
+      function setMixMode(mode) {
+        state.mixMode = mode;
+        syncInputsFromState();
+        updateCalculations();
+      }
+
+      ratioModeBtn.addEventListener("click", () => setMixMode("ratio"));
+      percentModeBtn.addEventListener("click", () => setMixMode("percent"));
+      percentInput.addEventListener("input", () => {
+        const percent = Number(percentInput.value);
+        if (Number.isFinite(percent) && percent > 0 && percent < 100) {
+          state.ratio = (100 - percent) / percent;
+          state.activePresetId = null;
+          state.cupAutoMode = true;
+        }
+        updateCalculations();
+      });
+
       ratioInput.addEventListener("input", () => {
         const val = parseFloat(ratioInput.value);
         if (Number.isFinite(val) && val > 0) {
