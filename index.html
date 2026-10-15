@@ -1228,6 +1228,7 @@
 
       presetForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        if (presetRatioInput.disabled) return;
         const name = presetNameInput.value.trim();
         const category = presetCategoryInput.value;
         const ratio = parseFloat(presetRatioInput.value);

@@ -43,7 +43,7 @@ export function getProfiles(product, variantID) {
 }
 
 export function getRatioOptions(profile) {
-  if (profile?.calculation_allowed !== true || profile.ratio_basis !== "concentrate_to_water") return [];
+  if (profile?.calculation_allowed !== true || profile.ratio_basis !== "concentrate_to_water" || profile.proportional_scaling_allowed === false) return [];
   const min = profile.dilution_min, max = profile.dilution_max;
   if ((min !== null && !positive(min)) || (max !== null && !positive(max)) || (min !== null && max !== null && min > max)) return [];
   return [...new Set([min, max].filter(positive))];
@@ -52,10 +52,15 @@ export function getRatioOptions(profile) {
 export function getPresetDefaults(product, variantID, profileID) {
   const variant = product.variants.find(variant => variant.variant_id === variantID);
   const profile = getProfiles(product, variantID).find(profile => profile.profile_id === profileID);
-  const [method = "사용 방법 미확인", category = "기타", waterL = null] = METHODS[profile?.method] || [];
+  const [method = "사용 방법 미확인", category = "기타", equipmentWater = null] = METHODS[profile?.method] || [];
+  const fixedDose = profile?.fixed_dose_calculation_allowed === true && profile.proportional_scaling_allowed === false;
+  const sourceWater = profile?.recommended_water_ml ?? profile?.water_ml;
+  const catalogWater = (profile?.calculation_allowed === true || fixedDose) && positive(sourceWater);
+  const waterL = catalogWater ? sourceWater / 1000 : equipmentWater;
+  const waterSource = catalogWater ? "catalog" : equipmentWater === null ? null : "equipment";
   const ratio = getRatioOptions(profile).length === 1 && profile.dilution_min === profile.dilution_max ? profile.dilution_min : null;
   const name = product.name + (variant && product.variants.length > 1 ? ` · ${variant.option_name}` : "");
-  return { name: name.slice(0, 80), ratio, waterL, category, note: profile ? method : "" };
+  return { name: name.slice(0, 80), ratio, waterL, waterSource, fixedDose, waterApproximate: profile?.recommended_water_is_approximate === true || profile?.approximate === true, category, note: profile ? method : "" };
 }
 
 export function getPumpOptions(product, variantID) {

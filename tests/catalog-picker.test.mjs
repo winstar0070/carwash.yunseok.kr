@@ -58,3 +58,15 @@ test("catalog reads omit credentials, reuse only endpoint-specific offline data,
   assert.equal((await loadCatalog("/api", { storage: { setItem: () => { throw new Error("quota"); } }, fetcher: async () => ({ ok: true, json: async () => data }) })).cached, false);
   assert.equal(calls, 1);
 });
+
+test("fixed capsules preserve the recommended water volume without deriving a scalable ratio", () => {
+  const capsule = { ...fixed, profile_id: "capsule", method: "bucket", calculation_allowed: false, ratio_basis: "unknown", dilution_min: null, dilution_max: null, fixed_dose_calculation_allowed: true, proportional_scaling_allowed: false, recommended_water_ml: 16000, recommended_water_is_approximate: true };
+  const defaults = getPresetDefaults({ ...product, dilution_profiles: [capsule] }, "small", "capsule");
+  assert.equal(defaults.ratio, null);
+  assert.equal(defaults.waterL, 16);
+  assert.equal(defaults.waterSource, "catalog");
+  assert.equal(defaults.waterApproximate, true);
+  assert.equal(defaults.fixedDose, true);
+  assert.deepEqual(getRatioOptions({ ...fixed, proportional_scaling_allowed: false }), []);
+  assert.equal(getPresetDefaults(product, "small", "foam").waterSource, "equipment");
+});

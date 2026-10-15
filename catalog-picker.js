@@ -42,6 +42,9 @@ function clearSelection() {
   selection.hidden = true;
   $("catalogRatioHelp").hidden = true;
   $("catalogWaterHelp").hidden = true;
+  ratio.disabled = false;
+  water.readOnly = false;
+  $("submitPresetFormBtn").disabled = false;
   closeResults();
 }
 
@@ -108,11 +111,11 @@ function updateVariant() {
   const profiles = getProfiles(chosen, variant.value);
   setOptions(profile, profiles.map(row => {
     const options = getRatioOptions(row);
-    const label = options.length ? options.map(value => `1:${value}`).join(" ~ ") : "비율 확인 필요";
+    const label = row.fixed_dose_calculation_allowed === true && row.proportional_scaling_allowed === false ? "정량 투입 지침" : options.length ? options.map(value => `1:${value}`).join(" ~ ") : "비율 확인 필요";
     return [row.profile_id, `${METHODS[row.method]?.[0] || "기타 사용 방법"} · ${label}`];
   }), "사용 방법을 선택하세요");
   profile.disabled = profiles.length === 0;
-  const usable = profiles.filter(row => getRatioOptions(row).length > 0);
+  const usable = profiles.filter(row => getRatioOptions(row).length > 0 || (row.fixed_dose_calculation_allowed === true && row.proportional_scaling_allowed === false));
   if (usable.length === 1) profile.value = usable[0].profile_id;
   else if (profiles.length === 1) profile.value = profiles[0].profile_id;
   pumps = getPumpOptions(chosen, variant.value);
@@ -130,6 +133,9 @@ function updateProfile() {
   const defaults = getPresetDefaults(chosen, variant.value, profile.value);
   name.value = defaults.name;
   ratio.value = defaults.ratio ?? "";
+  ratio.disabled = defaults.fixedDose;
+  water.readOnly = defaults.fixedDose;
+  $("submitPresetFormBtn").disabled = defaults.fixedDose;
   water.value = defaults.waterL ?? "";
   $("presetCategoryInput").value = defaults.category;
   $("presetNoteInput").value = defaults.note;
@@ -138,9 +144,9 @@ function updateProfile() {
   $("catalogRatioChoiceField").hidden = !needsChoice;
   setOptions(ratioChoice, options.map(value => [String(value), `원액 1 : 물 ${value}`]), "지침을 확인해 선택 / 직접 입력");
   $("catalogRatioHelp").hidden = false;
-  $("catalogRatioHelp").textContent = !current ? "사용 방법을 선택하면 해당 옵션의 비율을 불러와요." : !options.length ? "물 기준의 희석비율이 확인되지 않았어요. 제품 지침을 확인해 직접 입력하세요." : needsChoice ? "등록된 값은 범위 또는 한쪽 한계값이에요. 원문 조건을 확인해 선택하거나 직접 입력하세요." : "원액 1 : 물 기준의 확인된 비율이에요." + (current.method === "foam_lance" ? " 폼랜스 통 사전 혼합비이며 분사 후 농도가 아니에요." : "");
+  $("catalogRatioHelp").textContent = defaults.fixedDose ? "정량 캡슐 투입 지침만 확인된 제품이에요. 물 양에 비례한 희석 계산이나 비율 프리셋 저장을 지원하지 않아요. 원문 지침을 확인하세요." : !current ? "사용 방법을 선택하면 해당 옵션의 비율을 불러와요." : !options.length ? "물 기준의 희석비율이 확인되지 않았어요. 제품 지침을 확인해 직접 입력하세요." : needsChoice ? "등록된 값은 범위 또는 한쪽 한계값이에요. 원문 조건을 확인해 선택하거나 직접 입력하세요." : "원액 1 : 물 기준의 확인된 비율이에요." + (current.method === "foam_lance" ? " 폼랜스 통 사전 혼합비이며 분사 후 농도가 아니에요." : "");
   $("catalogWaterHelp").hidden = false;
-  $("catalogWaterHelp").textContent = defaults.waterL === null ? "채울 물의 양을 직접 입력하세요." : `앱의 장비 기본값 ${defaults.waterL}L예요. 제조사 권장 물량이 아니며, 실제 채울 물의 양으로 바꿔 주세요.`;
+  $("catalogWaterHelp").textContent = defaults.waterSource === "catalog" ? `DB 사용 지침의 물 ${defaults.waterApproximate ? "약 " : ""}${defaults.waterL}L예요.` + (defaults.fixedDose ? " 정량 투입 제품이므로 물 양에 비례해 환산하지 마세요." : " 원문 사용 조건을 확인하세요.") : defaults.waterL === null ? "채울 물의 양을 직접 입력하세요." : `앱의 장비 기본값 ${defaults.waterL}L예요. 제조사 권장 물량이 아니며, 실제 채울 물의 양으로 바꿔 주세요.`;
   $("catalogSource").hidden = !current;
   $("catalogClaim").textContent = current?.raw_claim || "등록된 원문이 없어요.";
   $("catalogEvidence").textContent = current?.conversion_note || "";

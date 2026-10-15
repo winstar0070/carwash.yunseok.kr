@@ -36,7 +36,17 @@ test("Pages build publishes only runtime assets and removes stale private files"
       assert.equal(info.isSymbolicLink(), false, `Public output must not contain symlinks: ${entry}`);
       if (info.isFile()) files.push(entry);
     }
-    assert.deepEqual(files.sort(), ["404.html", "_headers", "backup-data.js", "backup.js", "catalog-picker.js", "catalog-data.js", "config.js", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "index.html", "manifest.webmanifest", "pwa.js", "sw.js", "sync.js"].sort());
+    const versioned = files.filter(file => /^assets\/(backup|sync|catalog-picker|config|pwa)-[a-f0-9]{16}\.js$/.test(file));
+    assert.equal(versioned.length, 5, "Client bundles and API config must have immutable URLs");
+    assert.deepEqual(files.filter(file => !versioned.includes(file)).sort(), ["404.html", "_headers", "backup-data.js", "backup.js", "catalog-picker.js", "catalog-data.js", "config.js", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "index.html", "manifest.webmanifest", "pwa.js", "sw.js", "sync.js"].sort());
+    const html = await readFile(join(directory, "dist/index.html"), "utf8");
+    const sw = await readFile(join(directory, "dist/sw.js"), "utf8");
+    for (const file of versioned) {
+      assert.ok(html.includes(`src="/${file}"`));
+      assert.ok(sw.includes(`"/${file}"`), `Offline cache must contain ${file}`);
+      assert.doesNotMatch(await readFile(join(directory, "dist", file), "utf8"), /from\s*["']@simplewebauthn\//);
+    }
+    for (const file of ["config.js", "sync.js", "backup.js", "catalog-picker.js", "pwa.js"]) assert.ok(!html.includes(`src="/${file}"`));
     assert.equal(await readFile(join(directory, "dist/config.js"), "utf8"), 'window.CARWASH_API_BASE = "https://carwash-api.yunseok.kr/api";\n');
     assert.doesNotMatch(await readFile(join(directory, "dist/sync.js"), "utf8"), /from\s*["']@simplewebauthn\//);
     const manifest = JSON.parse(await readFile(join(directory, "dist/manifest.webmanifest"), "utf8"));
@@ -45,6 +55,10 @@ test("Pages build publishes only runtime assets and removes stale private files"
     env.CARWASH_API_BASE = "http://localhost:8787/api";
     build();
     assert.equal(await readFile(join(directory, "dist/config.js"), "utf8"), 'window.CARWASH_API_BASE = "http://localhost:8787/api";\n');
+    const updatedHTML = await readFile(join(directory, "dist/index.html"), "utf8");
+    const updatedSW = await readFile(join(directory, "dist/sw.js"), "utf8");
+    assert.notEqual(updatedHTML.match(/assets\/config-[a-f0-9]+\.js/)[0], html.match(/assets\/config-[a-f0-9]+\.js/)[0]);
+    assert.notEqual(updatedSW.match(/const CACHE_NAME = (.*);/)[1], sw.match(/const CACHE_NAME = (.*);/)[1]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
