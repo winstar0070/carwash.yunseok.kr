@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0D11" />
+  <meta name="description" content="셀프 세차장 버킷·분무기 물 용량 기준 케미컬 원액 투입량(ml) 계산기 및 나만의 케미컬 프리셋 보관함" />
+  <title>세차 희석비율 계산기 — carwash.yunseok.kr</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23151921'/%3E%3Cpath d='M16 5C16 5 8 14.2 8 20a8 8 0 0 0 16 0c0-5.8-8-15-8-15Z' fill='%233182F6'/%3E%3Cpath d='M13 21a3 3 0 0 0 3 3' stroke='%23EBF4FF' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg-base: #0B0D11;
+      --bg-surface: #151921;
+      --bg-elevated: #1D232E;
+      --bg-interactive: #252C3A;
+      --bg-interactive-hover: #2E3748;
+      --border-subtle: rgba(214, 226, 245, 0.09);
+      --border-focus: rgba(76, 154, 255, 0.6);
+
+      --text-primary: #F2F5FA;
+      --text-secondary: #B4C0D4;
+      --text-muted: #93A2B8;
+
+      --accent-blue: #1B64DA;
+      --accent-blue-hover: #1554B8;
+      --accent-blue-bright: #529DFF;
+      --accent-blue-soft: rgba(49, 130, 246, 0.16);
+      --accent-aqua: #20C997;
+      --accent-aqua-soft: rgba(32, 201, 151, 0.14);
+      --accent-danger: #F04452;
+
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --radius-pill: 999px;
+
+      --shadow-surface: 0 12px 32px -8px rgba(4, 7, 13, 0.65);
+      --shadow-float: 0 18px 40px -10px rgba(4, 7, 13, 0.8);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+      --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+      color-scheme: dark;
+      caret-color: var(--accent-blue-bright);
+    }
+
+    ::selection {
+      background-color: rgba(49, 130, 246, 0.32);
+      color: var(--text-primary);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-interactive);
+      border-radius: var(--radius-pill);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--bg-interactive-hover);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      font-feature-settings: "tnum" 1;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      color: inherit;
+      border: none;
+      background: none;
+    }
+
+    button {
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s var(--ease-out-expo), background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent-blue-bright);
+      outline-offset: 2px;
+    }
+
+    /* Layout Shell */
+    .app-shell {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 22px 16px 56px;
+    }
+
+    /* Top Bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 20px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      color: var(--accent-blue-bright);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.375rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .mode-pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-aqua);
+    }
+
+    /* Main Grid */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (min-width: 840px) {
+      .app-shell {
+        padding: 32px 28px 64px;
+      }
+
+      .workspace {
+        grid-template-columns: 1.12fr 0.88fr;
+        gap: 24px;
+      }
+    }
+
+    /* Primary Calculator Column */
+    .calc-column {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Readout Display Surface */
+    .readout-surface {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 24px 22px 22px;
+      box-shadow: var(--shadow-surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .readout-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .active-chemical-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-blue-soft);
+      color: #99C6FF;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      max-width: 100%;
+    }
+
+    .active-chemical-badge span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .formula-summary {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .readout-main {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 6px 0 20px;
+      flex-wrap: wrap;
+    }
+
+    .readout-value-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .readout-number {
+      font-size: clamp(3.25rem, 9vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.02;
+      color: var(--text-primary);
+    }
+
+    .readout-unit {
+      font-size: clamp(1.35rem, 4vw, 1.85rem);
+      font-weight: 700;
+      color: var(--accent-blue-bright);
+    }
+
+    .copy-result-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .copy-result-btn:hover {
+      background: var(--bg-interactive);
+      color: var(--text-primary);
+    }
+
+    /* Visual Cylinder & Dosing Gauge (Signature Move) */
+    .cylinder-box {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .cylinder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    .cylinder-scale-select {
+      display: inline-flex;
+      gap: 4px;
+      background: var(--bg-surface);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .scale-btn {
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .scale-btn.is-active {
+      background: var(--bg-interactive);
+      color: var(--text-primary);
+    }
+
+    .cylinder-meter {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cylinder-track {
+      position: relative;
+      height: 18px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      padding: 2px;
+    }
+
+    .cylinder-fill {
+      height: 100%;
+      width: 30%;
+      background: var(--accent-blue-bright);
+      border-radius: var(--radius-pill);
+      transition: width 0.35s var(--ease-out-expo), background-color 0.25s ease;
+    }
+
+    .cylinder-ticks {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px;
+    }
+
+    .cylinder-tick {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Helper Conversion Chips */
+    .conversion-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .conversion-item {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .conversion-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .conversion-val {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* Input Control Panels */
+    .control-group {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px 20px;
+      box-shadow: var(--shadow-surface);
+    }
+
+    .control-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .control-title {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .unit-toggle {
+      display: inline-flex;
+      background: var(--bg-base);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .unit-btn {
+      padding: 5px 11px;
+      border-radius: 7px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .unit-btn.is-active {
+      background: var(--bg-interactive);
+      color: var(--text-primary);
+    }
+
+    .input-stepper-row {
+      display: grid;
+      grid-template-columns: 52px 1fr 52px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .step-btn {
+      height: 54px;
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 1.35rem;
+      font-weight: 600;
+      display: grid;
+      place-items: center;
+    }
+
+    .step-btn:hover {
+      background: var(--bg-interactive);
+    }
+
+    .number-field-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: var(--bg-base);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      height: 54px;
+      padding: 0 16px;
+      transition: border-color 0.15s ease;
+    }
+
+    .number-field-wrap:focus-within {
+      border-color: var(--accent-blue-bright);
+    }
+
+    .ratio-prefix {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 4px;
+      user-select: none;
+    }
+
+    .number-input {
+      width: 100%;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: right;
+      padding-right: 6px;
+      outline: none;
+    }
+
+    .number-input::-webkit-outer-spin-button,
+    .number-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .number-input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    .field-suffix {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    /* Quick Preset Chips */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 480px) {
+      .conversion-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .quick-chip {
+      min-height: 48px;
+      padding: 6px 8px;
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.2;
+    }
+
+    .quick-chip small {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .quick-chip:hover {
+      background: var(--bg-interactive);
+      color: var(--text-primary);
+    }
+
+    .quick-chip.is-active {
+      background: var(--accent-blue-soft);
+      border-color: var(--border-focus);
+      color: #99C6FF;
+    }
+
+    .quick-chip.is-active small {
+      color: #99C6FF;
+    }
+
+    /* Right Column: Personal Chemical Shelf */
+    .shelf-column {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px 20px;
+      box-shadow: var(--shadow-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .shelf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .shelf-title-wrap h2 {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .shelf-title-wrap p {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .save-current-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: var(--accent-blue);
+      color: #FFFFFF;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .save-current-btn:hover {
+      background: var(--accent-blue-hover);
+    }
+
+    /* Inline Add/Edit Preset Form */
+    .preset-form {
+      background: var(--bg-base);
+      border: 1px solid var(--border-focus);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .preset-form.is-open {
+      display: flex;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .form-row-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-field label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .text-input, .select-input {
+      height: 42px;
+      padding: 0 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-weight: 600;
+      outline: none;
+    }
+
+    .text-input:focus, .select-input:focus {
+      border-color: var(--accent-blue-bright);
+    }
+
+    .text-input::placeholder {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn-ghost {
+      padding: 9px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-interactive);
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-blue);
+      color: #FFFFFF;
+      font-size: 0.8125rem;
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-blue-hover);
+    }
+
+    .form-error {
+      font-size: 0.75rem;
+      color: var(--accent-danger);
+      display: none;
+    }
+
+    .form-error.is-visible {
+      display: block;
+    }
+
+    /* Preset List */
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preset-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 15px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+    }
+
+    .preset-item:hover {
+      background: var(--bg-interactive);
+    }
+
+    .preset-item.is-selected {
+      background: var(--accent-blue-soft);
+      border-color: var(--border-focus);
+    }
+
+    .preset-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .preset-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 3px;
+    }
+
+    .preset-category {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--bg-base);
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .preset-name {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preset-meta {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .preset-dose-preview {
+      color: var(--accent-aqua);
+      font-weight: 700;
+    }
+
+    .preset-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: var(--text-muted);
+    }
+
+    .icon-btn:hover {
+      background: rgba(240, 68, 82, 0.16);
+      color: var(--accent-danger);
+    }
+
+    .icon-btn.edit-btn:hover {
+      background: var(--bg-base);
+      color: var(--text-primary);
+    }
+
+    .empty-shelf {
+      text-align: center;
+      padding: 28px 16px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-base);
+      border: 1px dashed var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .empty-shelf button {
+      margin-top: 10px;
+      color: #99C6FF;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    /* Quick Reference Table Footer */
+    .shelf-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .reset-defaults-btn {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .reset-defaults-btn:hover {
+      color: var(--text-primary);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translate(-50%, 16px);
+      background: var(--bg-interactive);
+      color: var(--text-primary);
+      border: 1px solid var(--border-focus);
+      padding: 10px 18px;
+      border-radius: var(--radius-pill);
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-float);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.25s var(--ease-out-expo);
+      z-index: 50;
+    }
+
+    .toast.is-visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+        </svg>
+        <h1 class="brand-title">세차 희석비율 계산기</h1>
+      </div>
+      <div class="mode-pill" title="실제 세차장에서 물을 먼저 받고 원액을 넣는 기준">
+        <span class="mode-pill-dot" aria-hidden="true"></span>
+        <span>물 용량 고정 기준</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <!-- Left / Primary Calculator -->
+      <section class="calc-column" aria-label="원액 용량 계산기">
+        <div class="readout-surface">
+          <div class="readout-top">
+            <div class="active-chemical-badge" id="activeChemicalBadge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/>
+              </svg>
+              <span id="activeChemicalName">직접 계산 (물 15L · 1:500)</span>
+            </div>
+            <div class="formula-summary" id="formulaSummary">물 15,000ml ÷ 500</div>
+          </div>
+
+          <div class="readout-main">
+            <div class="readout-value-wrap" aria-live="polite">
+              <span class="readout-number" id="doseResultValue">30</span>
+              <span class="readout-unit" id="doseResultUnit">ml</span>
+            </div>
+            <button type="button" class="copy-result-btn" id="copyResultBtn" aria-label="계산 결과 복사">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copyBtnText">결과 복사</span>
+            </button>
+          </div>
+
+          <!-- Signature Move: Real-time Measuring Cup Scale -->
+          <div class="cylinder-box">
+            <div class="cylinder-header">
+              <span id="cylinderCaption">계량컵 눈금 가이드 (100ml 컵 기준 30% 채움)</span>
+              <div class="cylinder-scale-select" role="group" aria-label="계량컵 최대 눈금 선택">
+                <button type="button" class="scale-btn" data-cup="30">30ml</button>
+                <button type="button" class="scale-btn" data-cup="50">50ml</button>
+                <button type="button" class="scale-btn is-active" data-cup="100">100ml</button>
+                <button type="button" class="scale-btn" data-cup="250">250ml</button>
+              </div>
+            </div>
+            <div class="cylinder-meter" aria-hidden="true">
+              <div class="cylinder-track">
+                <div class="cylinder-fill" id="cylinderFill"></div>
+              </div>
+              <div class="cylinder-ticks" id="cylinderTicks">
+                <span class="cylinder-tick">0</span>
+                <span class="cylinder-tick">25</span>
+                <span class="cylinder-tick">50</span>
+                <span class="cylinder-tick">75</span>
+                <span class="cylinder-tick">100ml</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conversion-strip">
+            <div class="conversion-item">
+              <div class="conversion-label">계량컵 / 소분 뚜껑</div>
+              <div class="conversion-val" id="capConversionText">30ml 컵 1번</div>
+            </div>
+            <div class="conversion-item">
+              <div class="conversion-label">디스펜서 펌프 (2ml/5ml)</div>
+              <div class="conversion-val" id="pumpConversionText">15회 / 6회</div>
+            </div>
+            <div class="conversion-item">
+              <div class="conversion-label">원액 투입 후 총 용량</div>
+              <div class="conversion-val" id="totalVolumeText">15.03 L</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 1: Water Volume -->
+        <div class="control-group">
+          <div class="control-header">
+            <h2 class="control-title">
+              <span>버킷 · 분무기 물 용량</span>
+            </h2>
+            <div class="unit-toggle" role="group" aria-label="물 용량 단위 선택">
+              <button type="button" class="unit-btn is-active" id="unitLiterBtn" data-unit="L">리터 (L)</button>
+              <button type="button" class="unit-btn" id="unitMlBtn" data-unit="ml">밀리리터 (ml)</button>
+            </div>
+          </div>
+
+          <div class="input-stepper-row">
+            <button type="button" class="step-btn" id="waterMinusBtn" aria-label="물 용량 감소">−</button>
+            <label class="number-field-wrap" for="waterInput">
+              <input type="number" id="waterInput" class="number-input" value="15" min="0.1" max="200000" step="0.5" inputmode="decimal" />
+              <span class="field-suffix" id="waterUnitSuffix">L</span>
+            </label>
+            <button type="button" class="step-btn" id="waterPlusBtn" aria-label="물 용량 증가">+</button>
+          </div>
+
+          <div class="quick-grid" id="waterQuickGrid">
+            <button type="button" class="quick-chip" data-water-l="1">
+              <span>1 L</span>
+              <small>폼랜스/분무기</small>
+            </button>
+            <button type="button" class="quick-chip" data-water-l="1.5">
+              <span>1.5 L</span>
+              <small>압축분무기</small>
+            </button>
+            <button type="button" class="quick-chip" data-water-l="2">
+              <span>2 L</span>
+              <small>대형분무기</small>
+            </button>
+            <button type="button" class="quick-chip" data-water-l="4">
+              <span>4 L</span>
+              <small>미니버킷</small>
+            </button>
+            <button type="button" class="quick-chip" data-water-l="10">
+              <span>10 L</span>
+              <small>표준버킷</small>
+            </button>
+            <button type="button" class="quick-chip" data-water-l="12">
+              <span>12 L</span>
+              <small>13L 버킷 눈금</small>
+            </button>
+            <button type="button" class="quick-chip is-active" data-water-l="15">
+              <span>15 L</span>
+              <small>18L 버킷 권장</small>
+            </button>
+            <button type="button" class="quick-chip" data-water-l="18">
+              <span>18 L</span>
+              <small>대형버킷</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Dilution Ratio -->
+        <div class="control-group">
+          <div class="control-header">
+            <h2 class="control-title">
+              <span>희석 비율 (원액 1 : 물 N)</span>
+            </h2>
+            <span class="formula-summary" id="ratioPercentageText">농도 약 0.20%</span>
+          </div>
+
+          <div class="input-stepper-row">
+            <button type="button" class="step-btn" id="ratioMinusBtn" aria-label="희석 비율 감소">−</button>
+            <label class="number-field-wrap" for="ratioInput">
+              <span class="ratio-prefix">1 :</span>
+              <input type="number" id="ratioInput" class="number-input" value="500" min="1" max="10000" step="10" inputmode="numeric" />
+            </label>
+            <button type="button" class="step-btn" id="ratioPlusBtn" aria-label="희석 비율 증가">+</button>
+          </div>
+
+          <div class="quick-grid" id="ratioQuickGrid">
+            <button type="button" class="quick-chip" data-ratio="5">
+              <span>1 : 5</span>
+              <small>휠/타이어</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="10">
+              <span>1 : 10</span>
+              <small>실내/APC</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="20">
+              <span>1 : 20</span>
+              <small>프리워시(강)</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="30">
+              <span>1 : 30</span>
+              <small>시트러스</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="100">
+              <span>1 : 100</span>
+              <small>폼랜스/물왁스</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="300">
+              <span>1 : 300</span>
+              <small>고농축 샴푸</small>
+            </button>
+            <button type="button" class="quick-chip is-active" data-ratio="500">
+              <span>1 : 500</span>
+              <small>표준 카샴푸</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="1000">
+              <span>1 : 1000</span>
+              <small>초고농축 샴푸</small>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right / Personal Chemical Presets Shelf -->
+      <aside class="shelf-column" aria-label="나만의 케미컬 프리셋 보관함">
+        <div class="shelf-header">
+          <div class="shelf-title-wrap">
+            <h2>내 케미컬 보관함</h2>
+            <p>자주 쓰는 세차 용품과 비율을 기기에 저장해 바로 불러오세요</p>
+          </div>
+          <button type="button" class="save-current-btn" id="togglePresetFormBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>프리셋 추가</span>
+          </button>
+        </div>
+
+        <!-- Inline Add / Edit Form -->
+        <form class="preset-form" id="presetForm" novalidate>
+          <input type="hidden" id="editingPresetId" value="" />
+          <div class="form-row">
+            <div class="form-field">
+              <label for="presetNameInput">케미컬 이름</label>
+              <input type="text" id="presetNameInput" class="text-input" placeholder="예: 카프로 리셋 카샴푸" maxlength="40" required />
+            </div>
+          </div>
+          <div class="form-row-split">
+            <div class="form-field">
+              <label for="presetCategoryInput">용도 분류</label>
+              <select id="presetCategoryInput" class="select-input">
+                <option value="카샴푸">카샴푸</option>
+                <option value="프리워시">프리워시</option>
+                <option value="폼랜스">폼랜스</option>
+                <option value="휠/타이어">휠/타이어</option>
+                <option value="다목적(APC)">다목적(APC)</option>
+                <option value="코팅/드라잉">코팅/드라잉</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="presetRatioInput">희석 비율 (1:N)</label>
+              <input type="number" id="presetRatioInput" class="text-input" value="500" min="1" max="10000" inputmode="numeric" required />
+            </div>
+          </div>
+          <div class="form-row-split">
+            <div class="form-field">
+              <label for="presetWaterInput">기본 물 용량 (L)</label>
+              <input type="number" id="presetWaterInput" class="text-input" value="15" min="0.1" max="200" step="0.1" inputmode="decimal" required />
+            </div>
+            <div class="form-field">
+              <label for="presetNoteInput">메모 (선택)</label>
+              <input type="text" id="presetNoteInput" class="text-input" placeholder="예: 1펌프=2ml" maxlength="30" />
+            </div>
+          </div>
+          <p class="form-error" id="presetFormError">케미컬 이름과 올바른 물 용량·희석비율을 입력해 주세요.</p>
+          <div class="form-actions">
+            <button type="button" class="btn-ghost" id="cancelPresetFormBtn">취소</button>
+            <button type="submit" class="btn-primary" id="submitPresetFormBtn">보관함에 저장</button>
+          </div>
+        </form>
+
+        <div class="preset-list" id="presetList" role="list"></div>
+
+        <div class="shelf-footer">
+          <span>이 브라우저(localStorage)에 자동 저장됨</span>
+          <button type="button" class="reset-defaults-btn" id="resetPresetsBtn">기본 추천 목록 복원</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast" id="toastMessage" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = "carwash_yunseok_presets_v1";
+      const STATE_KEY = "carwash_yunseok_last_state_v1";
+
+      const DEFAULT_PRESETS = [
+        {
+          id: "preset-shampoo-500",
+          name: "중성 카샴푸 표준 (버킷)",
+          category: "카샴푸",
+          waterL: 15,
+          ratio: 500,
+          note: "18L 버킷 눈금 15L 기준"
+        },
+        {
+          id: "preset-shampoo-1000",
+          name: "고농축 카샴푸 (1:1000)",
+          category: "카샴푸",
+          waterL: 15,
+          ratio: 1000,
+          note: "소량 계량 주의"
+        },
+        {
+          id: "preset-prewash-20",
+          name: "시트러스 프리워시 (압축분무기)",
+          category: "프리워시",
+          waterL: 1.5,
+          ratio: 20,
+          note: "벌레/타르 오염 심할 때"
+        },
+        {
+          id: "preset-prewash-30",
+          name: "알칼리 프리워시 데일리",
+          category: "프리워시",
+          waterL: 2,
+          ratio: 30,
+          note: "2L 대용량 압축분무기"
+        },
+        {
+          id: "preset-foam-10",
+          name: "고압수 폼랜스 스노우폼",
+          category: "폼랜스",
+          waterL: 1,
+          ratio: 10,
+          note: "1L 폼보틀 물 기준"
+        },
+        {
+          id: "preset-apc-5",
+          name: "휠 · 타이어 갈변 세정제",
+          category: "휠/타이어",
+          waterL: 1,
+          ratio: 5,
+          note: "분무기 1L 기준 고농도"
+        }
+      ];
+
+      let state = {
+        waterMl: 15000,
+        unit: "L",
+        ratio: 500,
+        cupMaxMl: 100,
+        cupAutoMode: true,
+        activePresetId: null,
+        presets: []
+      };
+
+      // DOM Elements
+      const doseResultValue = document.getElementById("doseResultValue");
+      const doseResultUnit = document.getElementById("doseResultUnit");
+      const formulaSummary = document.getElementById("formulaSummary");
+      const activeChemicalName = document.getElementById("activeChemicalName");
+      const cylinderCaption = document.getElementById("cylinderCaption");
+      const cylinderFill = document.getElementById("cylinderFill");
+      const cylinderTicks = document.getElementById("cylinderTicks");
+      const capConversionText = document.getElementById("capConversionText");
+      const pumpConversionText = document.getElementById("pumpConversionText");
+      const totalVolumeText = document.getElementById("totalVolumeText");
+      const ratioPercentageText = document.getElementById("ratioPercentageText");
+
+      const waterInput = document.getElementById("waterInput");
+      const waterUnitSuffix = document.getElementById("waterUnitSuffix");
+      const unitLiterBtn = document.getElementById("unitLiterBtn");
+      const unitMlBtn = document.getElementById("unitMlBtn");
+      const waterMinusBtn = document.getElementById("waterMinusBtn");
+      const waterPlusBtn = document.getElementById("waterPlusBtn");
+      const waterQuickGrid = document.getElementById("waterQuickGrid");
+
+      const ratioInput = document.getElementById("ratioInput");
+      const ratioMinusBtn = document.getElementById("ratioMinusBtn");
+      const ratioPlusBtn = document.getElementById("ratioPlusBtn");
+      const ratioQuickGrid = document.getElementById("ratioQuickGrid");
+
+      const copyResultBtn = document.getElementById("copyResultBtn");
+      const copyBtnText = document.getElementById("copyBtnText");
+
+      const togglePresetFormBtn = document.getElementById("togglePresetFormBtn");
+      const presetForm = document.getElementById("presetForm");
+      const editingPresetId = document.getElementById("editingPresetId");
+      const presetNameInput = document.getElementById("presetNameInput");
+      const presetCategoryInput = document.getElementById("presetCategoryInput");
+      const presetRatioInput = document.getElementById("presetRatioInput");
+      const presetWaterInput = document.getElementById("presetWaterInput");
+      const presetNoteInput = document.getElementById("presetNoteInput");
+      const presetFormError = document.getElementById("presetFormError");
+      const cancelPresetFormBtn = document.getElementById("cancelPresetFormBtn");
+      const submitPresetFormBtn = document.getElementById("submitPresetFormBtn");
+      const presetList = document.getElementById("presetList");
+      const resetPresetsBtn = document.getElementById("resetPresetsBtn");
+      const toastMessage = document.getElementById("toastMessage");
+      const scaleButtons = document.querySelectorAll(".scale-btn");
+
+      let toastTimer = null;
+
+      function showToast(msg) {
+        toastMessage.textContent = msg;
+        toastMessage.classList.add("is-visible");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastMessage.classList.remove("is-visible");
+        }, 2200);
+      }
+
+      function formatNumber(val, maxDecimals = 1) {
+        if (!Number.isFinite(val)) return "0";
+        const rounded = Number(val.toFixed(maxDecimals));
+        return rounded.toLocaleString("ko-KR");
+      }
+
+      function calculateDoseMl(waterMl, ratio) {
+        if (!waterMl || !ratio || waterMl <= 0 || ratio <= 0) return 0;
+        return waterMl / ratio;
+      }
+
+      function pickRecommendedCup(doseMl) {
+        if (doseMl <= 30) return 30;
+        if (doseMl <= 50) return 50;
+        if (doseMl <= 100) return 100;
+        return 250;
+      }
+
+      function loadStorage() {
+        try {
+          const rawPresets = localStorage.getItem(STORAGE_KEY);
+          if (rawPresets) {
+            const parsed = JSON.parse(rawPresets);
+            if (Array.isArray(parsed)) {
+              state.presets = parsed;
+            } else {
+              state.presets = [...DEFAULT_PRESETS];
+            }
+          } else {
+            state.presets = [...DEFAULT_PRESETS];
+          }
+
+          const rawState = localStorage.getItem(STATE_KEY);
+          if (rawState) {
+            const saved = JSON.parse(rawState);
+            if (saved && typeof saved.waterMl === "number" && saved.waterMl > 0) {
+              state.waterMl = saved.waterMl;
+            }
+            if (saved && (saved.unit === "L" || saved.unit === "ml")) {
+              state.unit = saved.unit;
+            }
+            if (saved && typeof saved.ratio === "number" && saved.ratio > 0) {
+              state.ratio = saved.ratio;
+            }
+            if (saved && typeof saved.activePresetId === "string") {
+              state.activePresetId = saved.activePresetId;
+            }
+          }
+        } catch (err) {
+          state.presets = [...DEFAULT_PRESETS];
+        }
+      }
+
+      function saveStorage() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.presets));
+          localStorage.setItem(
+            STATE_KEY,
+            JSON.stringify({
+              waterMl: state.waterMl,
+              unit: state.unit,
+              ratio: state.ratio,
+              activePresetId: state.activePresetId
+            })
+          );
+        } catch (err) {
+          // Ignore storage quota errors
+        }
+      }
+
+      function syncInputsFromState() {
+        if (state.unit === "L") {
+          const liters = Number((state.waterMl / 1000).toFixed(2));
+          waterInput.value = liters;
+          waterInput.step = "0.5";
+          waterUnitSuffix.textContent = "L";
+          unitLiterBtn.classList.add("is-active");
+          unitMlBtn.classList.remove("is-active");
+        } else {
+          waterInput.value = Math.round(state.waterMl);
+          waterInput.step = "100";
+          waterUnitSuffix.textContent = "ml";
+          unitMlBtn.classList.add("is-active");
+          unitLiterBtn.classList.remove("is-active");
+        }
+        ratioInput.value = state.ratio;
+      }
+
+      function updateCalculations() {
+        const doseMl = calculateDoseMl(state.waterMl, state.ratio);
+        const precision = doseMl < 10 ? 2 : doseMl < 100 ? 1 : 0;
+        doseResultValue.textContent = formatNumber(doseMl, precision);
+        doseResultUnit.textContent = "ml";
+
+        const waterDisplay =
+          state.unit === "L"
+            ? `${formatNumber(state.waterMl / 1000, 2)}L (${formatNumber(state.waterMl, 0)}ml)`
+            : `${formatNumber(state.waterMl, 0)}ml`;
+
+        formulaSummary.textContent = `물 ${waterDisplay} ÷ ${formatNumber(state.ratio, 0)}`;
+
+        const activePreset = state.presets.find((p) => p.id === state.activePresetId);
+        if (activePreset) {
+          activeChemicalName.textContent = `${activePreset.name} (1:${activePreset.ratio})`;
+        } else {
+          const waterShort = state.waterMl >= 1000 ? `${formatNumber(state.waterMl / 1000, 1)}L` : `${formatNumber(state.waterMl, 0)}ml`;
+          activeChemicalName.textContent = `직접 계산 (물 ${waterShort} · 1:${state.ratio})`;
+        }
+
+        // Update Measuring Cup Scale
+        if (state.cupAutoMode) {
+          state.cupMaxMl = pickRecommendedCup(doseMl);
+        }
+        scaleButtons.forEach((btn) => {
+          const cupVal = Number(btn.dataset.cup);
+          btn.classList.toggle("is-active", cupVal === state.cupMaxMl);
+        });
+
+        const cupMax = state.cupMaxMl;
+        const fillPercent = Math.min(100, Math.max(0, (doseMl / cupMax) * 100));
+        cylinderFill.style.width = `${fillPercent.toFixed(1)}%`;
+
+        if (doseMl > cupMax) {
+          const fullCups = Math.floor(doseMl / cupMax);
+          const remainder = doseMl - fullCups * cupMax;
+          cylinderFill.style.backgroundColor = "var(--accent-aqua)";
+          cylinderCaption.textContent = `${cupMax}ml 계량컵 ${fullCups}번 가득 + ${formatNumber(remainder, 1)}ml 추가`;
+        } else {
+          cylinderFill.style.backgroundColor = "var(--accent-blue-bright)";
+          cylinderCaption.textContent = `${cupMax}ml 계량컵 눈금의 ${formatNumber(fillPercent, 0)}% (${formatNumber(doseMl, 1)}ml 눈금)`;
+        }
+
+        cylinderTicks.innerHTML = `
+          <span class="cylinder-tick">0</span>
+          <span class="cylinder-tick">${formatNumber(cupMax * 0.25, 1)}</span>
+          <span class="cylinder-tick">${formatNumber(cupMax * 0.5, 1)}</span>
+          <span class="cylinder-tick">${formatNumber(cupMax * 0.75, 1)}</span>
+          <span class="cylinder-tick">${cupMax}ml</span>
+        `;
+
+        // Helper conversions
+        if (doseMl <= 0) {
+          capConversionText.textContent = "-";
+          pumpConversionText.textContent = "-";
+          totalVolumeText.textContent = "-";
+        } else {
+          const cap30 = doseMl / 30;
+          if (cap30 < 1) {
+            capConversionText.textContent = `30ml 컵의 ${formatNumber(cap30 * 100, 0)}%`;
+          } else {
+            capConversionText.textContent = `30ml 컵 ${formatNumber(cap30, 1)}회`;
+          }
+
+          const pump2 = Math.round(doseMl / 2);
+          const pump5 = Number((doseMl / 5).toFixed(1));
+          pumpConversionText.textContent = `2ml ${pump2}회 · 5ml ${pump5}회`;
+
+          const totalMl = state.waterMl + doseMl;
+          if (totalMl >= 1000) {
+            totalVolumeText.textContent = `${formatNumber(totalMl / 1000, 2)} L`;
+          } else {
+            totalVolumeText.textContent = `${formatNumber(totalMl, 1)} ml`;
+          }
+        }
+
+        const pct = (1 / (state.ratio + 1)) * 100;
+        ratioPercentageText.textContent = `원액 농도 ${pct < 0.1 ? pct.toFixed(3) : pct.toFixed(2)}%`;
+
+        // Highlight active quick chips
+        document.querySelectorAll("#waterQuickGrid .quick-chip").forEach((chip) => {
+          const chipMl = Number(chip.dataset.waterL) * 1000;
+          chip.classList.toggle("is-active", Math.abs(chipMl - state.waterMl) < 1);
+        });
+
+        document.querySelectorAll("#ratioQuickGrid .quick-chip").forEach((chip) => {
+          const chipRatio = Number(chip.dataset.ratio);
+          chip.classList.toggle("is-active", chipRatio === state.ratio);
+        });
+
+        renderPresets();
+        saveStorage();
+      }
+
+      function renderPresets() {
+        if (!state.presets.length) {
+          presetList.innerHTML = `
+            <div class="empty-shelf">
+              <p>저장된 케미컬 프리셋이 없습니다.</p>
+              <button type="button" id="emptyRestoreBtn">기본 추천 세차 케미컬 불러오기</button>
+            </div>
+          `;
+          const restoreBtn = document.getElementById("emptyRestoreBtn");
+          if (restoreBtn) {
+            restoreBtn.addEventListener("click", () => {
+              state.presets = [...DEFAULT_PRESETS];
+              updateCalculations();
+              showToast("기본 추천 케미컬 프리셋을 복원했습니다");
+            });
+          }
+          return;
+        }
+
+        presetList.innerHTML = state.presets
+          .map((item) => {
+            const itemWaterMl = Number(item.waterL) * 1000;
+            const itemDose = calculateDoseMl(itemWaterMl, Number(item.ratio));
+            const doseFormatted = formatNumber(itemDose, itemDose < 10 ? 2 : 1);
+            const isSelected = state.activePresetId === item.id;
+
+            return `
+              <div class="preset-item ${isSelected ? "is-selected" : ""}" role="listitem" data-preset-id="${item.id}" tabindex="0">
+                <div class="preset-info">
+                  <div class="preset-name-row">
+                    <span class="preset-category">${escapeHtml(item.category || "케미컬")}</span>
+                    <span class="preset-name">${escapeHtml(item.name)}</span>
+                  </div>
+                  <div class="preset-meta">
+                    <span>물 ${formatNumber(Number(item.waterL), 1)}L · 1:${formatNumber(Number(item.ratio), 0)}</span>
+                    <span class="preset-dose-preview">→ 원액 ${doseFormatted}ml</span>
+                    ${item.note ? `<span>· ${escapeHtml(item.note)}</span>` : ""}
+                  </div>
+                </div>
+                <div class="preset-actions">
+                  <button type="button" class="icon-btn edit-btn" data-action="edit" data-id="${item.id}" aria-label="${escapeHtml(item.name)} 수정" title="수정">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 20h9"></path>
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                  </button>
+                  <button type="button" class="icon-btn" data-action="delete" data-id="${item.id}" aria-label="${escapeHtml(item.name)} 삭제" title="삭제">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // Event Listeners: Unit Toggle
+      unitLiterBtn.addEventListener("click", () => {
+        if (state.unit !== "L") {
+          state.unit = "L";
+          syncInputsFromState();
+          updateCalculations();
+        }
+      });
+
+      unitMlBtn.addEventListener("click", () => {
+        if (state.unit !== "ml") {
+          state.unit = "ml";
+          syncInputsFromState();
+          updateCalculations();
+        }
+      });
+
+      // Water Input & Steppers
+      waterInput.addEventListener("input", () => {
+        const val = parseFloat(waterInput.value);
+        if (Number.isFinite(val) && val > 0) {
+          state.waterMl = state.unit === "L" ? val * 1000 : val;
+          state.activePresetId = null;
+          state.cupAutoMode = true;
+          updateCalculations();
+        }
+      });
+
+      waterMinusBtn.addEventListener("click", () => {
+        const stepMl = state.unit === "L" ? (state.waterMl <= 3000 ? 500 : 1000) : 100;
+        state.waterMl = Math.max(100, state.waterMl - stepMl);
+        state.activePresetId = null;
+        state.cupAutoMode = true;
+        syncInputsFromState();
+        updateCalculations();
+      });
+
+      waterPlusBtn.addEventListener("click", () => {
+        const stepMl = state.unit === "L" ? (state.waterMl < 3000 ? 500 : 1000) : 100;
+        state.waterMl = Math.min(200000, state.waterMl + stepMl);
+        state.activePresetId = null;
+        state.cupAutoMode = true;
+        syncInputsFromState();
+        updateCalculations();
+      });
+
+      waterQuickGrid.addEventListener("click", (e) => {
+        const chip = e.target.closest(".quick-chip");
+        if (!chip) return;
+        const liters = parseFloat(chip.dataset.waterL);
+        if (Number.isFinite(liters)) {
+          state.waterMl = liters * 1000;
+          state.activePresetId = null;
+          state.cupAutoMode = true;
+          syncInputsFromState();
+          updateCalculations();
+        }
+      });
+
+      // Ratio Input & Steppers
+      ratioInput.addEventListener("input", () => {
+        const val = parseFloat(ratioInput.value);
+        if (Number.isFinite(val) && val > 0) {
+          state.ratio = val;
+          state.activePresetId = null;
+          state.cupAutoMode = true;
+          updateCalculations();
+        }
+      });
+
+      ratioMinusBtn.addEventListener("click", () => {
+        const step = state.ratio <= 20 ? 1 : state.ratio <= 100 ? 10 : 50;
+        state.ratio = Math.max(1, state.ratio - step);
+        state.activePresetId = null;
+        state.cupAutoMode = true;
+        syncInputsFromState();
+        updateCalculations();
+      });
+
+      ratioPlusBtn.addEventListener("click", () => {
+        const step = state.ratio < 20 ? 1 : state.ratio < 100 ? 10 : 50;
+        state.ratio = Math.min(10000, state.ratio + step);
+        state.activePresetId = null;
+        state.cupAutoMode = true;
+        syncInputsFromState();
+        updateCalculations();
+      });
+
+      ratioQuickGrid.addEventListener("click", (e) => {
+        const chip = e.target.closest(".quick-chip");
+        if (!chip) return;
+        const ratio = parseFloat(chip.dataset.ratio);
+        if (Number.isFinite(ratio)) {
+          state.ratio = ratio;
+          state.activePresetId = null;
+          state.cupAutoMode = true;
+          syncInputsFromState();
+          updateCalculations();
+        }
+      });
+
+      // Measuring Cup Scale Manual Selection
+      scaleButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.cupMaxMl = Number(btn.dataset.cup);
+          state.cupAutoMode = false;
+          updateCalculations();
+        });
+      });
+
+      // Copy Result
+      copyResultBtn.addEventListener("click", async () => {
+        const doseMl = calculateDoseMl(state.waterMl, state.ratio);
+        const waterL = formatNumber(state.waterMl / 1000, 2);
+        const copyText = `물 ${waterL}L (${formatNumber(state.waterMl, 0)}ml) 기준 1:${state.ratio} 희석 → 원액 ${formatNumber(doseMl, 1)}ml 투입`;
+        try {
+          await navigator.clipboard.writeText(copyText);
+          copyBtnText.textContent = "복사됨";
+          showToast(`복사 완료: 원액 ${formatNumber(doseMl, 1)}ml`);
+          setTimeout(() => {
+            copyBtnText.textContent = "결과 복사";
+          }, 1500);
+        } catch (err) {
+          showToast(copyText);
+        }
+      });
+
+      // Preset Form Toggle & Submit
+      function openPresetForm(presetToEdit = null) {
+        presetFormError.classList.remove("is-visible");
+        if (presetToEdit) {
+          editingPresetId.value = presetToEdit.id;
+          presetNameInput.value = presetToEdit.name;
+          presetCategoryInput.value = presetToEdit.category || "카샴푸";
+          presetRatioInput.value = presetToEdit.ratio;
+          presetWaterInput.value = presetToEdit.waterL;
+          presetNoteInput.value = presetToEdit.note || "";
+          submitPresetFormBtn.textContent = "수정 내용 저장";
+        } else {
+          editingPresetId.value = "";
+          presetNameInput.value = "";
+          presetCategoryInput.value = "카샴푸";
+          presetRatioInput.value = state.ratio;
+          presetWaterInput.value = Number((state.waterMl / 1000).toFixed(2));
+          presetNoteInput.value = "";
+          submitPresetFormBtn.textContent = "보관함에 저장";
+        }
+        presetForm.classList.add("is-open");
+        presetNameInput.focus();
+      }
+
+      function closePresetForm() {
+        presetForm.classList.remove("is-open");
+        presetFormError.classList.remove("is-visible");
+        editingPresetId.value = "";
+      }
+
+      togglePresetFormBtn.addEventListener("click", () => {
+        if (presetForm.classList.contains("is-open")) {
+          closePresetForm();
+        } else {
+          openPresetForm();
+        }
+      });
+
+      cancelPresetFormBtn.addEventListener("click", closePresetForm);
+
+      presetForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const name = presetNameInput.value.trim();
+        const category = presetCategoryInput.value;
+        const ratio = parseFloat(presetRatioInput.value);
+        const waterL = parseFloat(presetWaterInput.value);
+        const note = presetNoteInput.value.trim();
+
+        if (!name || !Number.isFinite(ratio) || ratio <= 0 || !Number.isFinite(waterL) || waterL <= 0) {
+          presetFormError.classList.add("is-visible");
+          return;
+        }
+
+        const editId = editingPresetId.value;
+        if (editId) {
+          state.presets = state.presets.map((p) =>
+            p.id === editId ? { ...p, name, category, ratio, waterL, note } : p
+          );
+          state.activePresetId = editId;
+          showToast(`'${name}' 프리셋을 수정했습니다`);
+        } else {
+          const newId = "preset-" + Date.now();
+          const newPreset = { id: newId, name, category, ratio, waterL, note };
+          state.presets.unshift(newPreset);
+          state.activePresetId = newId;
+          showToast(`'${name}' 프리셋을 보관함에 추가했습니다`);
+        }
+
+        state.waterMl = waterL * 1000;
+        state.ratio = ratio;
+        state.cupAutoMode = true;
+        closePresetForm();
+        syncInputsFromState();
+        updateCalculations();
+      });
+
+      // Preset List Click & Keyboard Interaction
+      presetList.addEventListener("click", (e) => {
+        const actionBtn = e.target.closest("button[data-action]");
+        if (actionBtn) {
+          e.stopPropagation();
+          const action = actionBtn.dataset.action;
+          const id = actionBtn.dataset.id;
+          const targetPreset = state.presets.find((p) => p.id === id);
+          if (!targetPreset) return;
+
+          if (action === "delete") {
+            state.presets = state.presets.filter((p) => p.id !== id);
+            if (state.activePresetId === id) {
+              state.activePresetId = null;
+            }
+            updateCalculations();
+            showToast(`'${targetPreset.name}' 프리셋을 삭제했습니다`);
+          } else if (action === "edit") {
+            openPresetForm(targetPreset);
+          }
+          return;
+        }
+
+        const itemEl = e.target.closest(".preset-item");
+        if (!itemEl) return;
+        const presetId = itemEl.dataset.presetId;
+        const preset = state.presets.find((p) => p.id === presetId);
+        if (!preset) return;
+
+        state.activePresetId = preset.id;
+        state.waterMl = Number(preset.waterL) * 1000;
+        state.ratio = Number(preset.ratio);
+        state.cupAutoMode = true;
+        syncInputsFromState();
+        updateCalculations();
+      });
+
+      presetList.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          const itemEl = e.target.closest(".preset-item");
+          if (itemEl && !e.target.closest("button")) {
+            e.preventDefault();
+            itemEl.click();
+          }
+        }
+      });
+
+      resetPresetsBtn.addEventListener("click", () => {
+        state.presets = [...DEFAULT_PRESETS];
+        state.activePresetId = DEFAULT_PRESETS[0].id;
+        state.waterMl = DEFAULT_PRESETS[0].waterL * 1000;
+        state.ratio = DEFAULT_PRESETS[0].ratio;
+        state.cupAutoMode = true;
+        syncInputsFromState();
+        updateCalculations();
+        showToast("기본 추천 케미컬 목록으로 복원했습니다");
+      });
+
+      // Initialize
+      loadStorage();
+      syncInputsFromState();
+      updateCalculations();
+    })();
+  </script>
+</body>
+</html>

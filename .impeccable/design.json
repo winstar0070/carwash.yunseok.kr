@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T00:12:00+09:00",
+  "title": "Design System: 세차 희석비율 계산기 (carwash.yunseok.kr)",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Toss Deep Action Blue",
+        "canonical": "#1B64DA",
+        "tonalRamp": ["#081F47", "#0E3373", "#1549A3", "#1B64DA", "#3B82F6", "#6AA3FF", "#99C6FF", "#D6E8FF"]
+      },
+      "primary-bright": {
+        "role": "primary",
+        "displayName": "Luminous Readout Blue",
+        "canonical": "#529DFF",
+        "tonalRamp": ["#0A254D", "#123E7A", "#1D5BB0", "#3182F6", "#529DFF", "#80B8FF", "#B3D5FF", "#E5F0FF"]
+      },
+      "secondary-aqua": {
+        "role": "secondary",
+        "displayName": "Metering Aqua",
+        "canonical": "#20C997",
+        "tonalRamp": ["#062E22", "#0B4D39", "#127356", "#189E76", "#20C997", "#4DDFB2", "#8AECD0", "#C6F7E8"]
+      },
+      "bg-base": {
+        "role": "neutral",
+        "displayName": "Obsidian Wash Bay",
+        "canonical": "#0B0D11",
+        "tonalRamp": ["#0B0D11", "#151921", "#1D232E", "#252C3A", "#374155", "#58657D", "#93A2B8", "#F2F5FA"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Crisp Ice White",
+        "canonical": "#F2F5FA",
+        "tonalRamp": ["#151921", "#252C3A", "#3E4A5E", "#64738C", "#93A2B8", "#B4C0D4", "#D5DFED", "#F2F5FA"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display Readout",
+        "purpose": "Primary concentrate dose (ml) readout number."
+      },
+      "headline": {
+        "displayName": "App Headline",
+        "purpose": "Top bar application title."
+      },
+      "title": {
+        "displayName": "Section Title",
+        "purpose": "Control panel and preset shelf headings."
+      },
+      "body": {
+        "displayName": "Tabular Body",
+        "purpose": "Preset names, conversion values, and numerical inputs."
+      },
+      "label": {
+        "displayName": "Utility Label",
+        "purpose": "Quick chip captions, unit toggles, and scale ticks."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-surface",
+        "value": "0 12px 32px -8px rgba(4, 7, 13, 0.65)",
+        "purpose": "Ambient depth for primary dark slate panels."
+      },
+      {
+        "name": "shadow-float",
+        "value": "0 18px 40px -10px rgba(4, 7, 13, 0.8)",
+        "purpose": "Elevated shadow for floating toast notifications."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Responsive haptic button press and measuring cup gauge fill transition."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "480px"
+      },
+      {
+        "name": "lg",
+        "value": "840px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "High-contrast blue action button for adding and saving chemical presets.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">프리셋 추가</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px; background: #1B64DA; color: #FFFFFF; font-size: 0.8125rem; font-weight: 700; border: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease; } .ds-btn-primary:hover { background: #1554B8; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #529DFF; outline-offset: 2px; }"
+    },
+    {
+      "name": "Quick Preset Chip",
+      "kind": "chip",
+      "refersTo": "chip-quick",
+      "description": "Two-line tactile preset chip for bucket volumes and dilution ratios.",
+      "html": "<button class=\"ds-chip is-active\" type=\"button\"><span>15 L</span><small>18L 버킷 권장</small></button>",
+      "css": ".ds-chip { min-height: 48px; padding: 6px 12px; border-radius: 12px; background: #1D232E; border: 1px solid rgba(214, 226, 245, 0.09); font-size: 0.875rem; font-weight: 600; color: #B4C0D4; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); } .ds-chip small { font-size: 0.6875rem; font-weight: 500; color: #93A2B8; } .ds-chip:hover { background: #252C3A; color: #F2F5FA; } .ds-chip.is-active { background: rgba(49, 130, 246, 0.16); border-color: rgba(76, 154, 255, 0.6); color: #99C6FF; } .ds-chip.is-active small { color: #99C6FF; } .ds-chip:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Stepper Number Field",
+      "kind": "input",
+      "refersTo": "input-stepper",
+      "description": "Recessed numeric field with large minus/plus stepper buttons for one-handed operation.",
+      "html": "<div class=\"ds-stepper\"><button class=\"ds-step-btn\" type=\"button\">−</button><label class=\"ds-field\"><input class=\"ds-input\" type=\"number\" value=\"15\" /><span class=\"ds-suffix\">L</span></label><button class=\"ds-step-btn\" type=\"button\">+</button></div>",
+      "css": ".ds-stepper { display: grid; grid-template-columns: 52px 1fr 52px; gap: 10px; align-items: center; } .ds-step-btn { height: 54px; border-radius: 12px; background: #1D232E; border: 1px solid rgba(214, 226, 245, 0.09); color: #F2F5FA; font-size: 1.35rem; font-weight: 600; cursor: pointer; } .ds-step-btn:hover { background: #252C3A; } .ds-field { display: flex; align-items: center; background: #0B0D11; border: 1.5px solid rgba(214, 226, 245, 0.09); border-radius: 12px; height: 54px; padding: 0 16px; } .ds-field:focus-within { border-color: #529DFF; } .ds-input { width: 100%; background: none; border: none; color: #F2F5FA; font-size: 1.5rem; font-weight: 700; text-align: right; padding-right: 6px; outline: none; font-variant-numeric: tabular-nums; } .ds-suffix { font-size: 1rem; font-weight: 600; color: #B4C0D4; }"
+    },
+    {
+      "name": "Measuring Cup Gauge",
+      "kind": "custom",
+      "refersTo": "cylinder-gauge",
+      "description": "Real-time visual dosing bar mapped to physical measuring cup graduations.",
+      "html": "<div class=\"ds-gauge\"><div class=\"ds-track\"><div class=\"ds-fill\" style=\"width: 30%;\"></div></div><div class=\"ds-ticks\"><span>0</span><span>25</span><span>50</span><span>75</span><span>100ml</span></div></div>",
+      "css": ".ds-gauge { background: #0B0D11; border: 1px solid rgba(214, 226, 245, 0.09); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 8px; } .ds-track { height: 18px; background: #151921; border-radius: 999px; border: 1px solid rgba(214, 226, 245, 0.09); padding: 2px; overflow: hidden; } .ds-fill { height: 100%; background: #529DFF; border-radius: 999px; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1); } .ds-ticks { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: #93A2B8; padding: 0 4px; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Chemical Preset Shelf Item",
+      "kind": "card",
+      "refersTo": "preset-card",
+      "description": "Saved personal chemical item showing water base, dilution ratio, and computed dose preview.",
+      "html": "<div class=\"ds-preset\"><div><div class=\"ds-preset-top\"><span class=\"ds-tag\">카샴푸</span><span class=\"ds-name\">중성 카샴푸 표준 (버킷)</span></div><div class=\"ds-meta\">물 15L · 1:500 <strong class=\"ds-dose\">→ 원액 30ml</strong></div></div></div>",
+      "css": ".ds-preset { padding: 14px 15px; border-radius: 18px; background: #1D232E; border: 1px solid rgba(214, 226, 245, 0.09); color: #F2F5FA; cursor: pointer; } .ds-preset:hover { background: #252C3A; } .ds-preset-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; } .ds-tag { font-size: 0.6875rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #0B0D11; color: #B4C0D4; } .ds-name { font-size: 0.9375rem; font-weight: 700; } .ds-meta { font-size: 0.8125rem; color: #B4C0D4; } .ds-dose { color: #20C997; font-weight: 700; margin-left: 6px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Bay Precision Calculator",
+    "overview": "셀프 세차장의 반실내·야간 조명 환경과 젖은 손이라는 실제 현장 조건에 맞춰, 토스(Toss)와 애플 기본 계산기(Apple Calculator)의 정교한 다크 유틸리티 감각을 결합한 디자인 시스템입니다. 장식적인 그래픽이나 불필요한 대시보드 위젯을 배제하고, 사용자가 물을 받은 즉시 넣어야 할 원액 용량(ml)을 3초 안에 판독·조작할 수 있도록 명확한 표면 위계와 큼직한 터치 타겟에 집중합니다.",
+    "keyCharacteristics": [
+      "깊은 옵시디언 베이스(#0B0D11)와 슬레이트 표면(#151921, #1D232E)의 3단계 명도 레이어링",
+      "모든 수치 및 계산 결과에 tabular-nums를 강제한 흔들림 없는 숫자 판독성",
+      "젖은 손이나 한 손 엄지 조작을 배려한 최소 48px~54px 높이의 넉넉한 스테퍼 및 퀵 칩 타겟",
+      "실시간 계량컵 눈금 게이지(30ml/50ml/100ml/250ml)를 통한 직관적인 물리 계량 연결"
+    ],
+    "rules": [
+      {
+        "name": "The Wet-Hand Contrast Rule",
+        "body": "모든 보조 라벨과 플레이스홀더 텍스트는 가장 밝은 카드 표면(#1D232E) 위에서도 최소 4.5:1 이상의 명도 대비를 유지해야 하며, 흐릿한 회색 텍스트를 절대 사용하지 않습니다.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Numerals Rule",
+        "body": "물 용량, 희석 비율, 원액 산출량, 펌프 횟수 등 숫자가 표시되는 모든 요소는 font-variant-numeric: tabular-nums를 유지해야 합니다.",
+        "section": "typography"
+      },
+      {
+        "name": "The Recessed Input Rule",
+        "body": "숫자를 직접 입력하는 필드와 계량컵 트랙은 상위 카드(#151921)보다 한 단계 더 어두운 베이스 컬러(#0B0D11)로 파여 보이게 처리하여 조작 영역과 표시 영역을 명확히 구분합니다.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 모든 계산식을 '받아둔 물 용량 기준(원액 ml = 물 ml ÷ N)'으로 일관되게 유지하세요.",
+      "Do 버튼과 퀵 칩의 터치 타겟 높이를 최소 44px 이상(48px~54px 권장)으로 유지해 세차장에서 한 손으로 오작동 없이 누를 수 있게 하세요.",
+      "Do 새로운 상태나 보조 텍스트를 추가할 때 #1D232E 배경 대비 최소 4.5:1 명도비를 확인하세요."
+    ],
+    "donts": [
+      "Don't 제목(h1, h2) 위에 장식적인 영문 Kicker나 Eyebrow 라벨을 추가하지 마세요.",
+      "Don't 카드 좌측이나 우측에 두꺼운 컬러 보더(border-left: 3px~4px)를 넣는 클리셰를 사용하지 마세요.",
+      "Don't 그라디언트 텍스트나 네온 글로우 효과를 사용하지 마세요."
+    ]
+  }
+}
