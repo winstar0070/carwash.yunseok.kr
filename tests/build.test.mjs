@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 test("Pages build publishes only runtime assets and removes stale private files", async () => {
   const directory = await mkdtemp(join(process.env.CARWASH_TEST_TEMP_DIR || tmpdir(), "carwash-build-"));
   try {
-    for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons", "backup.js", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js", "sync.js", "scripts/build.mjs", "package.json", "compose.yaml", ".env.example", "server", "migrations"]) {
+    for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons", "backup.js", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js", "sync.js", "vault-sync.js", "scripts/build.mjs", "package.json", "compose.yaml", ".env.example", "server", "migrations"]) {
       try { await lstat(join(root, file)); } catch (error) { if (error.code === "ENOENT" && file === "404.html") continue; throw error; }
       await mkdir(dirname(join(directory, file)), { recursive: true });
       await cp(join(root, file), join(directory, file), { recursive: true });

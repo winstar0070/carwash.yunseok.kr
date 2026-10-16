@@ -286,12 +286,12 @@
           </div>
           <div id="ratioControls">
           <div class="input-stepper-row">
-            <button type="button" class="step-btn" id="ratioMinusBtn" aria-label="희석 비율 감소">−</button>
+            <button type="button" class="step-btn" id="ratioMinusBtn" aria-label="희석 비율 10 감소">−</button>
             <label class="number-field-wrap" for="ratioInput">
               <span class="ratio-prefix">1 :</span>
               <input type="number" id="ratioInput" aria-label="희석비율의 물 비율" class="number-input" value="500" min="0" step="any" inputmode="decimal" />
             </label>
-            <button type="button" class="step-btn" id="ratioPlusBtn" aria-label="희석 비율 증가">+</button>
+            <button type="button" class="step-btn" id="ratioPlusBtn" aria-label="희석 비율 10 증가">+</button>
           </div>
 
           <div class="quick-grid" id="ratioQuickGrid">
@@ -527,7 +527,7 @@
         <div class="preset-list" id="presetList" role="list"></div>
 
         <div class="shelf-footer">
-          <span>이 기기의 브라우저에 저장됩니다.</span>
+          <span id="presetStorageStatus" role="status">이 기기의 브라우저에 저장됩니다.</span>
           <button type="button" class="reset-defaults-btn" id="resetPresetsBtn">기본 목록 복원</button>
         </div>
         <details class="backup-panel" id="backupPanel">
@@ -550,7 +550,7 @@
         </details>
         <details class="sync-panel" id="syncPanel">
           <summary id="vaultLabel">패스키로 내 보관함 열기</summary>
-          <p>이메일·이름 없이 제품과 펌프 설정을 다른 기기에서도 불러오세요.</p>
+          <p>패스키로 열면 제품 추가·수정·삭제가 서버에 자동 저장됩니다. 다른 기기에서도 같은 보관함을 불러오세요.</p>
           <div class="backup-actions" id="syncGuestActions">
             <button type="button" class="btn-primary" id="createVaultBtn">내 보관함 만들기</button>
             <button type="button" class="btn-ghost" id="openVaultBtn">패스키로 불러오기</button>
@@ -743,6 +743,14 @@
         return rounded.toLocaleString("ko-KR");
       }
 
+      function formatDose(doseMl) {
+        const liters = doseMl >= 1000;
+        const precision = liters ? 3 : doseMl < 10 ? 2 : 1;
+        const value = formatNumber(liters ? doseMl / 1000 : doseMl, precision);
+        const unit = liters ? "L" : "ml";
+        return { value, unit, text: `${value}${unit}` };
+      }
+
       function calculateDoseMl(waterMl, ratio) {
         if (!waterMl || !ratio || waterMl <= 0 || ratio <= 0) return 0;
         return waterMl / ratio;
@@ -850,15 +858,16 @@
         togglePresetFormBtn.disabled = invalidPercent;
         if (invalidPercent) {
           doseResultValue.textContent = "—";
+          doseResultUnit.textContent = "";
           pumpDoseText.textContent = "농도를 먼저 확인해 주세요.";
           pumpConversionText.textContent = "—";
           formulaSummary.textContent = "올바른 농도를 입력해 주세요.";
           return;
         }
         const doseMl = calculateDoseMl(state.waterMl, state.ratio);
-        const precision = doseMl < 10 ? 2 : doseMl < 100 ? 1 : 0;
-        doseResultValue.textContent = formatNumber(doseMl, precision);
-        doseResultUnit.textContent = "ml";
+        const dose = formatDose(doseMl);
+        doseResultValue.textContent = dose.value;
+        doseResultUnit.textContent = dose.unit;
         updatePumpDose(doseMl);
 
         const waterDisplay =
@@ -973,7 +982,7 @@
           .map((item) => {
             const itemWaterMl = Number(item.waterL) * 1000;
             const itemDose = calculateDoseMl(itemWaterMl, Number(item.ratio));
-            const doseFormatted = formatNumber(itemDose, itemDose < 10 ? 2 : 1);
+            const doseFormatted = formatDose(itemDose).text;
             const isSelected = state.activePresetId === item.id;
 
             return `
@@ -985,7 +994,7 @@
                   </div>
                   <div class="preset-meta">
                     <span>물 ${formatNumber(Number(item.waterL), 1)}L · 1:${formatNumber(Number(item.ratio), 6)}</span>
-                    <span class="preset-dose-preview">→ 원액 ${doseFormatted}ml</span>
+                    <span class="preset-dose-preview">→ 원액 ${doseFormatted}</span>
                     ${item.pumpMl ? `<span>펌프 1회 ${formatNumber(Number(item.pumpMl), 3)}ml</span>` : ""}
                     ${item.note ? `<span>· ${escapeHtml(item.note)}</span>` : ""}
                   </div>
@@ -1137,8 +1146,7 @@
       });
 
       ratioMinusBtn.addEventListener("click", () => {
-        const step = state.ratio <= 20 ? 1 : state.ratio <= 100 ? 10 : 50;
-        state.ratio = Math.max(1, state.ratio - step);
+        state.ratio = Math.max(1, state.ratio - 10);
         state.activePresetId = null;
         state.cupAutoMode = true;
         syncInputsFromState();
@@ -1146,8 +1154,7 @@
       });
 
       ratioPlusBtn.addEventListener("click", () => {
-        const step = state.ratio < 20 ? 1 : state.ratio < 100 ? 10 : 50;
-        state.ratio = Math.min(10000, state.ratio + step);
+        state.ratio = Math.min(10000, state.ratio + 10);
         state.activePresetId = null;
         state.cupAutoMode = true;
         syncInputsFromState();
@@ -1181,11 +1188,12 @@
         const doseMl = calculateDoseMl(state.waterMl, state.ratio);
         const waterL = formatNumber(state.waterMl / 1000, 2);
         const pumpText = pumpMlInput.value !== "" && pumpMlInput.getAttribute("aria-invalid") !== "true" ? ` · ${pumpDoseText.textContent}` : "";
-        const copyText = `물 ${waterL}L (${formatNumber(state.waterMl, 0)}ml) 기준 1:${state.ratio} 희석 → 원액 ${formatNumber(doseMl, 1)}ml 투입${pumpText}`;
+        const doseText = formatDose(doseMl).text;
+        const copyText = `물 ${waterL}L (${formatNumber(state.waterMl, 0)}ml) 기준 1:${state.ratio} 희석 → 원액 ${doseText} 투입${pumpText}`;
         try {
           await navigator.clipboard.writeText(copyText);
           copyBtnText.textContent = "복사됨";
-          showToast(`복사 완료: 원액 ${formatNumber(doseMl, 1)}ml`);
+          showToast(`복사 완료: 원액 ${doseText}`);
           setTimeout(() => {
             copyBtnText.textContent = "결과 복사";
           }, 1500);
