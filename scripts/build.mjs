@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
 import { build } from "esbuild";
 
@@ -28,6 +29,18 @@ await publishScript("config.js", process.env.CARWASH_API_BASE
 await publishScript("pwa.js", await readFile("pwa.js"));
 
 let html = await readFile("index.html", "utf8");
+let commit = process.env.CF_PAGES_COMMIT_SHA;
+if (!commit) {
+  try {
+    commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    // Source archives may not contain Git metadata.
+  }
+}
+const buildVersion = /^[a-f0-9]{40,64}$/i.test(commit || "")
+  ? ` · 빌드 <span title="커밋 ${commit}">${commit.slice(0, 7)}</span>`
+  : " · 빌드 개발";
+html = html.replace('<span id="build-version"></span>', `<span id="build-version">${buildVersion}</span>`);
 let worker = await readFile("sw.js", "utf8");
 for (const [source, path] of assets) {
   html = html.replace(`src="${source}"`, `src="${path}"`);
