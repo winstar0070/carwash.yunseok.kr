@@ -46,6 +46,8 @@ for (const [source, path] of assets) {
   html = html.replace(`src="${source}"`, `src="${path}"`);
   worker = worker.replace(`"${source}"`, JSON.stringify(path));
 }
+// catalog-picker bundles its catalog-data import; source previews still cache the standalone module.
+worker = worker.replace('"/catalog-data.js", ', "");
 const fingerprint = hash(html + worker);
 worker = worker.replace(/const CACHE_NAME = "([^"]+)";/, (_, name) => `const CACHE_NAME = "${name}-${fingerprint}";`);
 await writeFile("dist/index.html", html);

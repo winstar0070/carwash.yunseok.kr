@@ -91,14 +91,11 @@ export function createApp(db, { origin, rpID }) {
       if (path === "/api/health" && request.method === "GET") return response({ ok: true });
       if (path === "/api/products" || path.startsWith("/api/products/")) {
         if (request.method !== "GET") throw new ApiError(405, "공용 제품 카탈로그는 조회만 가능합니다.");
-        if (path === "/api/products") return response(await listCatalog(db));
+        if (path === "/api/products") return response(await listCatalog(db, { picker: new URL(request.url).searchParams.get("view") === "picker" }));
         const product = await getCatalogProduct(db, path.slice("/api/products/".length));
         if (!product) throw new ApiError(404, "제품을 찾을 수 없습니다.");
         return response(product);
       }
-      (await db.run("DELETE FROM sessions WHERE expires_at < ?", Date.now()));
-      (await db.run("DELETE FROM challenges WHERE expires_at < ?", Date.now()));
-      (await db.run("DELETE FROM rate_limits WHERE expires_at < ?", Date.now()));
       if (request.method === "GET") {
         const id = await requireSession(request);
         if (path === "/api/session") return response({ vaultId: id, passkeys: (await db.get("SELECT count(*) AS count FROM credentials WHERE vault_id = ?", id)).count });

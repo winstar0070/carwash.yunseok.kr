@@ -35,7 +35,7 @@ function replayEdits(accepted, before, after, ids) {
 
 export function createVaultSync({ storage, api, applyPresets, onState, canApplyRemote = () => true, setTimer = setTimeout, clearTimer = clearTimeout }) {
   let vaultId = null, ready = false, conflict = false, resolving = false;
-  let epoch = 0, flight = null, resuming = null, retryTimer, retryDelay = 1000;
+  let epoch = 0, flight = null, refreshing = null, resuming = null, retryTimer, retryDelay = 1000;
   const read = (key, fallback) => JSON.parse(storage.getItem(key) || JSON.stringify(fallback));
   const local = () => read(SYNC_KEYS.presets, []);
   const owner = () => storage.getItem(SYNC_KEYS.owner);
@@ -72,7 +72,8 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
   }
   function clean(remote, id) {
     const changed = !same(local(), remote.presets) || owner() !== id;
-    write(id, { ...remote, dirty: false });
+    const entry = { ...remote, dirty: false };
+    if (!same(queued(id), entry)) write(id, entry);
     if (changed) applyPresets(remote.presets, id);
     ready = true; conflict = false; saved(changed);
   }
@@ -145,23 +146,29 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
     return flush();
   }
 
-  async function refresh() {
-    if (!vaultId || !ready || conflict || resolving) return;
-    await flush();
-    if (!vaultId || conflict || queued(vaultId)?.dirty) return;
+  function refresh() {
+    if (!vaultId || !ready || conflict || resolving) return Promise.resolve();
+    if (refreshing?.epoch === epoch) return refreshing.promise;
     const version = epoch, id = vaultId;
-    try {
-      const remote = await api("/presets");
-      if (!valid(version, id)) return;
-      remember();
-      if (remote.revision < queued(id)?.revision) return;
-      if (queued(id)?.dirty) {
-        if (queued(id).revision !== remote.revision) showConflict();
-        else await flush();
-      } else if (!canApplyRemote() && !same(local(), remote.presets)) {
-        notify("remotePending", "서버에 새 목록이 있습니다. 작성 중인 제품을 저장하거나 취소하면 목록을 갱신합니다.");
-      } else clean(remote, id);
-    } catch (error) { if (valid(version, id)) failure(error); }
+    const promise = (async () => {
+      await flush();
+      if (!valid(version, id) || !ready || conflict || resolving || queued(id)?.dirty) return;
+      try {
+        const remote = await api("/presets");
+        if (!valid(version, id)) return;
+        remember();
+        if (remote.revision < queued(id)?.revision) return;
+        if (queued(id)?.dirty) {
+          if (queued(id).revision !== remote.revision) showConflict();
+          else await flush();
+        } else if (!canApplyRemote() && !same(local(), remote.presets)) {
+          notify("remotePending", "서버에 새 목록이 있습니다. 작성 중인 제품을 저장하거나 취소하면 목록을 갱신합니다.");
+        } else clean(remote, id);
+      } catch (error) { if (valid(version, id)) failure(error); }
+    })();
+    refreshing = { epoch: version, promise };
+    void promise.finally(() => { if (refreshing?.promise === promise) refreshing = null; });
+    return promise;
   }
 
   function resume() {

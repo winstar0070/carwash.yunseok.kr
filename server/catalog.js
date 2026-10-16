@@ -48,16 +48,23 @@ export async function importCatalog(db, text) {
   const sha256 = createHash("sha256").update(text).digest("hex");
   await db.transaction(async () => {
     await db.run("SELECT pg_advisory_xact_lock(hashtext('carwash-catalog-import'))");
-    for (const [position, product] of products.entries()) {
-      await db.run("INSERT INTO catalog_products(id, position, data) VALUES (?, ?, ?::jsonb) ON CONFLICT(id) DO UPDATE SET position = EXCLUDED.position, data = EXCLUDED.data", product.product_id, position, product);
-    }
+    // Expand one bound JSONB array inside PostgreSQL instead of one round trip per product.
+    // WITH ORDINALITY is one based; stored positions retain the original zero-based order.
+    await db.run(`INSERT INTO catalog_products(id, position, data)
+      SELECT product->>'product_id', (ordinal - 1)::integer, product
+      FROM jsonb_array_elements(?::jsonb) WITH ORDINALITY AS entries(product, ordinal)
+      WHERE TRUE
+      ON CONFLICT(id) DO UPDATE SET position = EXCLUDED.position, data = EXCLUDED.data`, products);
     await db.run("INSERT INTO catalog_metadata(id, metadata, source_sha256, imported_at) VALUES (1, ?::jsonb, ?, ?) ON CONFLICT(id) DO UPDATE SET metadata = EXCLUDED.metadata, source_sha256 = EXCLUDED.source_sha256, imported_at = EXCLUDED.imported_at", metadata, sha256, Date.now());
   });
   return { imported: products.length, variants: products.reduce((count, product) => count + product.variants.length, 0), sha256 };
 }
 
-export async function listCatalog(db) {
-  const row = await db.get("SELECT metadata, COALESCE((SELECT jsonb_agg(data ORDER BY position, id) FROM catalog_products), '[]'::jsonb) AS products FROM catalog_metadata WHERE id = 1");
+export async function listCatalog(db, { picker = false } = {}) {
+  // Only discard research history; all usage instructions and source evidence remain available offline.
+  const metadata = picker ? "metadata - 'research_log'" : "metadata";
+  const product = picker ? "data - 'research_log'" : "data";
+  const row = await db.get(`SELECT ${metadata} AS metadata, COALESCE((SELECT jsonb_agg(${product} ORDER BY position, id) FROM catalog_products), '[]'::jsonb) AS products FROM catalog_metadata WHERE id = 1`);
   return row ? { ...row.metadata, products: row.products } : { products: [] };
 }
 
