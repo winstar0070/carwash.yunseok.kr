@@ -5,7 +5,7 @@ import { build } from "esbuild";
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
-for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "backup.js", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js"]) {
+for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "catalog-picker.js", "catalog-data.js", "config.js"]) {
   await mkdir(dirname(`dist/${file}`), { recursive: true });
   await cp(file, `dist/${file}`);
 }
@@ -18,7 +18,7 @@ async function publishScript(file, content) {
   await writeFile(`dist/${file}`, content); // Existing installed clients may still use the old URLs.
   assets.set(`/${file}`, path);
 }
-for (const file of ["backup.js", "sync.js", "catalog-picker.js"]) {
+for (const file of ["sync.js", "catalog-picker.js"]) {
   const output = await build({ entryPoints: [file], outfile: file, write: false, bundle: true, format: "esm", target: ["safari16", "chrome109"], minify: true });
   await publishScript(file, output.outputFiles[0].contents);
 }

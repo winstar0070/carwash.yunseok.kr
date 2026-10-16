@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 test("Pages build publishes only runtime assets and removes stale private files", async () => {
   const directory = await mkdtemp(join(process.env.CARWASH_TEST_TEMP_DIR || tmpdir(), "carwash-build-"));
   try {
-    for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons", "backup.js", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js", "sync.js", "vault-sync.js", "scripts/build.mjs", "package.json", "compose.yaml", ".env.example", "server", "migrations"]) {
+    for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js", "sync.js", "vault-sync.js", "scripts/build.mjs", "package.json", "compose.yaml", ".env.example", "server", "migrations"]) {
       try { await lstat(join(root, file)); } catch (error) { if (error.code === "ENOENT" && file === "404.html") continue; throw error; }
       await mkdir(dirname(join(directory, file)), { recursive: true });
       await cp(join(root, file), join(directory, file), { recursive: true });
@@ -36,9 +36,9 @@ test("Pages build publishes only runtime assets and removes stale private files"
       assert.equal(info.isSymbolicLink(), false, `Public output must not contain symlinks: ${entry}`);
       if (info.isFile()) files.push(entry);
     }
-    const versioned = files.filter(file => /^assets\/(backup|sync|catalog-picker|config|pwa)-[a-f0-9]{16}\.js$/.test(file));
-    assert.equal(versioned.length, 5, "Client bundles and API config must have immutable URLs");
-    assert.deepEqual(files.filter(file => !versioned.includes(file)).sort(), ["404.html", "_headers", "backup-data.js", "backup.js", "catalog-picker.js", "catalog-data.js", "config.js", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "index.html", "manifest.webmanifest", "pwa.js", "sw.js", "sync.js"].sort());
+    const versioned = files.filter(file => /^assets\/(sync|catalog-picker|config|pwa)-[a-f0-9]{16}\.js$/.test(file));
+    assert.equal(versioned.length, 4, "Client bundles and API config must have immutable URLs");
+    assert.deepEqual(files.filter(file => !versioned.includes(file)).sort(), ["404.html", "_headers", "catalog-picker.js", "catalog-data.js", "config.js", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "index.html", "manifest.webmanifest", "pwa.js", "sw.js", "sync.js"].sort());
     const html = await readFile(join(directory, "dist/index.html"), "utf8");
     const sw = await readFile(join(directory, "dist/sw.js"), "utf8");
     for (const file of versioned) {
@@ -46,7 +46,7 @@ test("Pages build publishes only runtime assets and removes stale private files"
       assert.ok(sw.includes(`"/${file}"`), `Offline cache must contain ${file}`);
       assert.doesNotMatch(await readFile(join(directory, "dist", file), "utf8"), /from\s*["']@simplewebauthn\//);
     }
-    for (const file of ["config.js", "sync.js", "backup.js", "catalog-picker.js", "pwa.js"]) assert.ok(!html.includes(`src="/${file}"`));
+    for (const file of ["config.js", "sync.js", "catalog-picker.js", "pwa.js"]) assert.ok(!html.includes(`src="/${file}"`));
     assert.equal(await readFile(join(directory, "dist/config.js"), "utf8"), 'window.CARWASH_API_BASE = "https://carwash-api.yunseok.kr/api";\n');
     assert.doesNotMatch(await readFile(join(directory, "dist/sync.js"), "utf8"), /from\s*["']@simplewebauthn\//);
     const manifest = JSON.parse(await readFile(join(directory, "dist/manifest.webmanifest"), "utf8"));

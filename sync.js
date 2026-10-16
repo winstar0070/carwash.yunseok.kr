@@ -138,5 +138,5 @@ setInterval(() => { if (document.visibilityState === "visible") void sync.refres
 if (!browserSupportsWebAuthn()) {
   document.getElementById("createVaultBtn").disabled = true;
   document.getElementById("openVaultBtn").disabled = true;
-  showStatus("이 브라우저에서는 패스키를 사용할 수 없습니다. 기기 내 저장과 백업은 사용할 수 있어요.");
+  showStatus("이 브라우저에서는 패스키를 사용할 수 없습니다. 기기 내 저장은 사용할 수 있어요.");
 } else { void sync.resume(); }
