@@ -12,7 +12,8 @@ function deferred() {
 function harness({ local = [], remote = [], revision = 0, owner = "", saved, request, canApplyRemote } = {}) {
   const values = new Map([[SYNC_KEYS.presets, JSON.stringify(local)], [SYNC_KEYS.owner, owner]]);
   if (saved) values.set(SYNC_KEYS.queue, JSON.stringify(saved));
-  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
+  const storageWrites = [];
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => { storageWrites.push({ key, value }); values.set(key, value); } };
   const server = { presets: clone(remote), revision };
   const calls = [], states = [], applied = [], timers = new Map();
   let timerID = 0;
@@ -32,7 +33,7 @@ function harness({ local = [], remote = [], revision = 0, owner = "", saved, req
     setTimer: (callback, delay) => { timers.set(++timerID, { callback, delay }); return timerID; },
     clearTimer: id => timers.delete(id),
   });
-  return { sync, storage, server, calls, states, applied, timers,
+  return { sync, storage, storageWrites, server, calls, states, applied, timers,
     edit: rows => storage.setItem(SYNC_KEYS.presets, JSON.stringify(rows)),
     local: () => JSON.parse(storage.getItem(SYNC_KEYS.presets)),
     queue: id => JSON.parse(storage.getItem(SYNC_KEYS.queue) || "{}")[id],
@@ -281,4 +282,106 @@ test("a failed conflict resolution keeps the choice available for another attemp
   assert.equal(h.states.at(-1).needsChoice, true);
   offline = false; await h.sync.choose("local");
   assert.deepEqual(h.server.presets, [row("local")]);
+});
+
+
+test("concurrent refresh and reconnect share one preset read without rewriting unchanged storage", async () => {
+  const waiting = deferred(), started = deferred(); let delay = false;
+  const h = harness({ remote: [row("old")], request: async ({ path, method }) => {
+    if (delay && path === "/presets" && method === "GET") { started.resolve(); await waiting.promise; }
+  } });
+  await h.sync.connect("vault-a");
+  h.calls.length = 0; h.storageWrites.length = 0; delay = true;
+  const first = h.sync.refresh(); await started.promise;
+  const second = h.sync.refresh(), third = h.sync.refresh(), reconnecting = h.sync.resume();
+  // Let the session lookup join the already-running refresh.
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.filter(call => call.path === "/presets").length, 1);
+  waiting.resolve(); await Promise.all([first, second, third, reconnecting]);
+  assert.equal(h.storageWrites.filter(write => write.key === SYNC_KEYS.queue).length, 0);
+  assert.equal(h.states.at(-1).phase, "saved");
+});
+
+test("a newer server revision is persisted once even if the rows are unchanged", async () => {
+  const h = harness({ remote: [row("old")] }); await h.sync.connect("vault-a");
+  h.storageWrites.length = 0; const applied = h.applied.length;
+  h.server.revision++;
+  await Promise.all([h.sync.refresh(), h.sync.refresh()]);
+  assert.equal(h.queue("vault-a").revision, 1);
+  assert.equal(h.storageWrites.filter(write => write.key === SYNC_KEYS.queue).length, 1);
+  assert.equal(h.applied.length, applied);
+});
+
+test("a failed shared refresh can retry and still receive server changes", async () => {
+  let fail = false;
+  const h = harness({ request: ({ path }) => { if (fail && path === "/presets") throw new TypeError("offline"); } });
+  await h.sync.connect("vault-a"); fail = true; h.calls.length = 0;
+  await Promise.all([h.sync.refresh(), h.sync.refresh(), h.sync.refresh()]);
+  assert.equal(h.calls.length, 1); assert.equal(h.states.at(-1).phase, "offline");
+  fail = false; h.server.presets = [row("new")]; h.server.revision++;
+  await h.sync.refresh();
+  assert.deepEqual(h.local(), [row("new")]); assert.equal(h.timers.size, 0);
+});
+
+test("an old account refresh neither blocks a new account nor clears its active refresh", async () => {
+  const oldWaiting = deferred(), oldStarted = deferred(), newWaiting = deferred(), newStarted = deferred();
+  let phase = "connect";
+  const h = harness({ request: async ({ path, method, server }) => {
+    if (path !== "/presets" || method !== "GET") return;
+    if (phase === "old") { const snapshot = clone(server); oldStarted.resolve(); await oldWaiting.promise; return snapshot; }
+    if (phase === "new") { newStarted.resolve(); await newWaiting.promise; }
+  } });
+  await h.sync.connect("vault-a"); phase = "old";
+  const oldRefresh = h.sync.refresh(); await oldStarted.promise;
+  phase = "connect"; h.server.presets = [row("private-b")];
+  await h.sync.connect("vault-b"); phase = "new";
+  const currentRefresh = h.sync.refresh(); await newStarted.promise;
+  oldWaiting.resolve(); await oldRefresh;
+  const reads = h.calls.length;
+  const joined = h.sync.refresh(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.length, reads, "late old finalization must not clear the new flight");
+  newWaiting.resolve(); await Promise.all([currentRefresh, joined]);
+  assert.deepEqual(h.local(), [row("private-b")]); assert.equal(h.sync.vaultId, "vault-b");
+});
+
+test("logging out during a refresh preserves guest data and does not recreate a queue entry", async () => {
+  const waiting = deferred(), started = deferred(); let delay = false;
+  const h = harness({ local: [row("guest")], remote: [row("private")], request: async ({ path, method }) => {
+    if (delay && path === "/presets" && method === "GET") { started.resolve(); await waiting.promise; }
+  } });
+  await h.sync.connect("vault-a"); delay = true;
+  const refreshing = h.sync.refresh(); await started.promise;
+  h.sync.disconnect(); h.storageWrites.length = 0;
+  waiting.resolve(); await refreshing;
+  assert.deepEqual(h.local(), [row("guest")]);
+  assert.equal(h.storageWrites.length, 0); assert.equal(h.states.at(-1).phase, "guest");
+});
+
+test("a refresh waiting for an old account save never queries the next account", async () => {
+  const waiting = deferred(), started = deferred();
+  const h = harness({ request: async ({ method }) => {
+    if (method === "PUT") { started.resolve(); await waiting.promise; }
+  } });
+  await h.sync.connect("vault-a");
+  h.edit([row("pending-a")]); const saving = h.sync.changed(); await started.promise;
+  const refreshing = h.sync.refresh();
+  h.server.presets = [row("private-b")]; await h.sync.connect("vault-b");
+  const reads = h.calls.filter(call => call.method === "GET").length;
+  waiting.resolve(); await Promise.all([saving, refreshing]);
+  assert.equal(h.calls.filter(call => call.method === "GET").length, reads);
+  assert.deepEqual(h.local(), [row("private-b")]);
+  assert.equal(h.queue("vault-a").dirty, true);
+});
+
+test("shared refresh preserves remotePending during editing and applies the remote deletion after closing", async () => {
+  let editing = false;
+  const h = harness({ remote: [row("old")], canApplyRemote: () => !editing });
+  await h.sync.connect("vault-a"); editing = true;
+  h.server.presets = []; h.server.revision++;
+  h.calls.length = 0; h.storageWrites.length = 0;
+  await Promise.all([h.sync.refresh(), h.sync.refresh(), h.sync.refresh()]);
+  assert.equal(h.calls.length, 1); assert.equal(h.states.at(-1).phase, "remotePending");
+  assert.deepEqual(h.local(), [row("old")]); assert.equal(h.storageWrites.length, 0);
+  editing = false; await h.sync.refresh();
+  assert.deepEqual(h.local(), []); assert.equal(h.queue("vault-a").revision, 1);
 });

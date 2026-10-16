@@ -9,7 +9,7 @@ export async function openStore(connection) {
     await sql`SELECT pg_advisory_xact_lock(hashtext('carwash-schema'))`;
     await sql`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)`;
     const applied = new Set((await sql`SELECT version FROM schema_migrations`).map((row) => row.version));
-    for (const [version, file] of [[1, "0001_vault.sql"], [2, "0002_catalog.sql"]]) {
+    for (const [version, file] of [[1, "0001_vault.sql"], [2, "0002_catalog.sql"], [3, "0003_expiry_indexes.sql"]]) {
       if (applied.has(version)) continue;
       await sql.unsafe(await readFile(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
       await sql`INSERT INTO schema_migrations VALUES (${version})`;

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseCatalog } from "../server/catalog.js";
+import { createHash } from "node:crypto";
+import { parseCatalog, importCatalog } from "../server/catalog.js";
 import { catalogFixture } from "./catalog-fixture.mjs";
 
 test("catalog preserves evidence, nulls, one-sided ratios and all source fields", () => {
@@ -45,4 +46,36 @@ test("catalog rejects unsafe calculation flags and invalid dilution or pump numb
     const data = catalogFixture(); change(data.products[0]);
     assert.throws(() => parseCatalog(JSON.stringify(data)));
   }
+});
+
+
+test("catalog import uses bounded parameterized statements and preserves the source hash/metadata", async () => {
+  const source = catalogFixture();
+  source.products = Array.from({ length: 192 }, (_, index) => ({ ...structuredClone(source.products[0]), product_id: `product-${index}`, name: `샴푸 '${index}; DROP TABLE nope` }));
+  source.research_log = ["원본 기록"];
+  const text = JSON.stringify(source, null, 2);
+  const calls = [];
+  let transactions = 0;
+  let inTransaction = false;
+  const db = {
+    transaction: async callback => { transactions++; inTransaction = true; try { return await callback(); } finally { inTransaction = false; } },
+    run: async (sql, ...parameters) => { assert.equal(inTransaction, true); calls.push({ sql, parameters }); },
+  };
+  const result = await importCatalog(db, text);
+  assert.equal(transactions, 1);
+  assert.equal(calls.length, 3, "one advisory lock, one products statement, one metadata statement regardless of catalog size");
+  assert.match(calls[0].sql, /pg_advisory_xact_lock/);
+  assert.equal(calls[1].sql.includes(source.products[0].name), false, "product text must remain a bound parameter");
+  const { products, ...metadata } = source;
+  assert.deepEqual(calls[1].parameters, [products]);
+  assert.deepEqual(calls[2].parameters[0], metadata);
+  assert.deepEqual(result, { imported: 192, variants: 192, sha256: createHash("sha256").update(text).digest("hex") });
+  assert.equal(calls[2].parameters[1], result.sha256);
+});
+
+test("invalid catalog imports fail before starting a transaction", async () => {
+  let transactions = 0;
+  const db = { transaction: async () => { transactions++; } };
+  for (const text of ["{", JSON.stringify({ ...catalogFixture(), products: [] })]) await assert.rejects(importCatalog(db, text));
+  assert.equal(transactions, 0);
 });

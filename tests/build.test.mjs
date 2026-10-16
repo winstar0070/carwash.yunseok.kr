@@ -42,11 +42,26 @@ test("Pages build publishes only runtime assets and removes stale private files"
     assert.deepEqual(files.filter(file => !versioned.includes(file)).sort(), ["404.html", "_headers", "catalog-picker.js", "catalog-data.js", "config.js", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "index.html", "manifest.webmanifest", "pwa.js", "sw.js", "sync.js"].sort());
     const html = await readFile(join(directory, "dist/index.html"), "utf8");
     const sw = await readFile(join(directory, "dist/sw.js"), "utf8");
+    const appFiles = JSON.parse(sw.match(/const APP_FILES = (\[[^;]+\]);/)[1]);
+    assert.ok(appFiles.includes("/"));
+    assert.ok(!appFiles.includes("/index.html"), "Only one HTML document should be downloaded during install");
+    assert.ok(!appFiles.includes("/catalog-data.js"), "Bundled catalog data must not be downloaded again");
+    assert.equal(new Set(appFiles).size, appFiles.length);
+    for (const file of appFiles) assert.ok(file === "/" || files.includes(file.slice(1)), `Offline asset must exist: ${file}`);
+    const headers = await readFile(join(directory, "dist/_headers"), "utf8");
+    const blocks = headers.trim().split(/\n\s*\n/).map(block => block.split("\n"));
+    const cacheRules = path => blocks.filter(([pattern]) => pattern === path || pattern === "/*" || pattern === "/:file" && /^\/[^/]+$/.test(path) || pattern === "/assets/*" && path.startsWith("/assets/"))
+      .flatMap(([, ...lines]) => lines.filter(line => /^\s+Cache-Control:/i.test(line)).map(line => line.trim().slice("Cache-Control:".length).trim()));
+    assert.deepEqual(cacheRules("/assets/config-1234567890abcdef.js"), ["public, max-age=31536000, immutable"]);
+    for (const path of ["/", "/index.html", "/config.js", "/sync.js", "/catalog-picker.js", "/catalog-data.js", "/pwa.js", "/sw.js"]) {
+      assert.deepEqual(cacheRules(path), ["public, max-age=0, must-revalidate"], `Exactly one revalidation rule must match ${path}`);
+    }
+
     assert.match(html, /· 빌드 <span title="커밋 1234567890abcdef1234567890abcdef12345678">1234567<\/span>/);
     for (const file of versioned) {
       assert.ok(html.includes(`src="/${file}"`));
       assert.ok(sw.includes(`"/${file}"`), `Offline cache must contain ${file}`);
-      assert.doesNotMatch(await readFile(join(directory, "dist", file), "utf8"), /from\s*["']@simplewebauthn\//);
+      assert.doesNotMatch(await readFile(join(directory, "dist", file), "utf8"), /(?:from\s*|import\s*\()["'](?:\.|@simplewebauthn\/)/, "Published bundles must not need uncached source modules");
     }
     for (const file of ["config.js", "sync.js", "catalog-picker.js", "pwa.js"]) assert.ok(!html.includes(`src="/${file}"`));
     assert.equal(await readFile(join(directory, "dist/config.js"), "utf8"), 'window.CARWASH_API_BASE = "https://carwash-api.yunseok.kr/api";\n');

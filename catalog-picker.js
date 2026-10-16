@@ -1,4 +1,4 @@
-import { METHODS, searchProducts, getProfiles, getRatioOptions, getPresetDefaults, getPumpOptions, loadCatalog } from "./catalog-data.js";
+import { METHODS, createProductSearch, getProfiles, getRatioOptions, getPresetDefaults, getPumpOptions, loadCatalog } from "./catalog-data.js";
 
 const $ = id => document.getElementById(id);
 const form = $("presetForm");
@@ -14,7 +14,7 @@ const pumpChoice = $("catalogPumpChoice");
 const ratio = $("presetRatioInput");
 const water = $("presetWaterInput");
 const pump = $("presetPumpInput");
-let catalog, loading, chosen, matches = [], active = -1, pumps = [];
+let catalog, searchCatalog, loading, chosen, matches = [], active = -1, pumps = [];
 
 function setOptions(select, rows, prompt) {
   select.replaceChildren();
@@ -53,7 +53,7 @@ function clearSelection() {
 
 function showMatches() {
   if (!catalog || chosen || document.activeElement !== search || !form.classList.contains("is-open")) return;
-  matches = searchProducts(catalog.data.products, search.value);
+  matches = searchCatalog(search.value);
   closeResults();
   results.replaceChildren();
   for (const [index, product] of matches.entries()) {
@@ -74,7 +74,7 @@ function showMatches() {
   }
   results.hidden = matches.length === 0;
   search.setAttribute("aria-expanded", String(matches.length > 0));
-  const prefix = catalog.cached ? "연결할 수 없어 마지막으로 받은 목록을 사용해요. " : "";
+  const prefix = catalog.cached ? "마지막으로 받은 목록을 사용해요. " : "";
   status.textContent = prefix + (!search.value.trim() ? "제품명·브랜드를 입력해 검색하세요. 직접 입력도 가능해요." : matches.length ? `${matches.length}개 검색 결과. 맞는 제품을 선택하세요. ↑↓ 키와 Enter로도 선택할 수 있어요.` : "일치하는 제품이 없어요. 검색어를 바꾸거나 ‘직접 입력’을 선택하세요.");
 }
 
@@ -88,7 +88,15 @@ async function ensureCatalog() {
       let storage;
       try { storage = localStorage; } catch { /* Manual entry also works without storage. */ }
       catalog = await loadCatalog(window.CARWASH_API_BASE || "/api", { storage });
+      searchCatalog = createProductSearch(catalog.data.products);
       showMatches();
+      // Replace the searchable snapshot only. Visible candidates and the selected product
+      // keep their original object until the user searches/selects again.
+      catalog.refresh?.then(fresh => {
+        if (!fresh) return;
+        catalog = fresh;
+        searchCatalog = createProductSearch(fresh.data.products);
+      });
     } catch {
       status.textContent = "제품 목록에 연결할 수 없어요. 직접 입력하거나 다시 불러와 주세요.";
       $("catalogRetry").hidden = false;

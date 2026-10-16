@@ -27,14 +27,28 @@ const normalize = value => String(value ?? "").normalize("NFKC").toLocaleLowerCa
 const applicable = (profile, variantID) => Array.isArray(profile?.applicable_variant_ids) && profile.applicable_variant_ids.includes(variantID);
 const positive = value => Number.isFinite(value) && value > 0 && value <= 1000000;
 
+// Build once per catalog snapshot. Public searchProducts remains safe for mutable callers.
+export function createProductSearch(products) {
+  const rows = products.filter(product => product.category === "liquid").map(product => ({
+    product,
+    text: normalize([product.name, ...product.variants.map(variant => `${variant.source_name || ""} ${variant.option_name || ""}`)].join(" ")),
+  }));
+  return (query, limit = 8) => {
+    const terms = query.trim().split(/\s+/).map(normalize).filter(Boolean);
+    if (!terms.length || limit <= 0) return [];
+    const matches = [];
+    for (const { product, text } of rows) {
+      if (terms.every(term => text.includes(term))) {
+        matches.push(product);
+        if (matches.length >= limit) break;
+      }
+    }
+    return matches;
+  };
+}
+
 export function searchProducts(products, query, limit = 8) {
-  const terms = query.trim().split(/\s+/).map(normalize).filter(Boolean);
-  if (!terms.length) return [];
-  return products.filter(product => {
-    if (product.category !== "liquid") return false;
-    const text = normalize([product.name, ...product.variants.map(variant => `${variant.source_name || ""} ${variant.option_name || ""}`)].join(" "));
-    return terms.every(term => text.includes(term));
-  }).slice(0, limit);
+  return createProductSearch(products)(query, limit);
 }
 
 export function getProfiles(product, variantID) {
@@ -75,25 +89,40 @@ function validCatalog(data) {
       && ["variants", "dilution_profiles", "pump_profiles"].every(key => Array.isArray(product[key]) && product[key].every(row => row && typeof row === "object")));
 }
 
+// Keep all selection evidence/profiles when talking to older servers or reading older caches.
+function pickerCatalog(data) {
+  const { research_log, ...metadata } = data;
+  return { ...metadata, products: data.products.map(({ research_log, ...product }) => product) };
+}
+
 export async function loadCatalog(base, { fetcher = fetch, storage } = {}) {
   const endpoint = `${base.replace(/\/$/, "")}/products`;
+  // Preserve the existing key so installed/offline clients can use their saved catalog.
   const key = `carwash-public-catalog-v1:${endpoint}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  let cached;
   try {
-    const response = await fetcher(endpoint, { credentials: "omit", signal: controller.signal });
-    if (!response.ok) throw new Error("제품 목록을 불러올 수 없습니다.");
-    const data = await response.json();
-    if (!validCatalog(data)) throw new Error("제품 목록 형식을 확인할 수 없습니다.");
-    try { storage?.setItem(key, JSON.stringify(data)); } catch { /* Storage may be full or unavailable. */ }
-    return { data, cached: false };
-  } catch (error) {
+    const data = JSON.parse(storage?.getItem(key) || "null");
+    if (validCatalog(data)) cached = pickerCatalog(data);
+  } catch { /* Storage can be unavailable or contain an incomplete older response. */ }
+
+  const refresh = async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const data = JSON.parse(storage?.getItem(key) || "null");
-      if (validCatalog(data)) return { data, cached: true };
-    } catch { /* Fall back to the existing manual form. */ }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
+      const options = { credentials: "omit", signal: controller.signal };
+      let response = await fetcher(`${endpoint}?view=picker`, options);
+      // Old servers normally ignore this query; tolerate those that reject it explicitly.
+      if (!response.ok && [400, 404].includes(response.status)) response = await fetcher(endpoint, options);
+      if (!response.ok) throw new Error("제품 목록을 불러올 수 없습니다.");
+      const received = await response.json();
+      if (!validCatalog(received)) throw new Error("제품 목록 형식을 확인할 수 없습니다.");
+      const data = pickerCatalog(received);
+      try { storage?.setItem(key, JSON.stringify(data)); } catch { /* Storage may be full or unavailable. */ }
+      return { data, cached: false };
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+  if (cached) return { data: cached, cached: true, refresh: refresh().catch(() => null) };
+  return refresh();
 }
