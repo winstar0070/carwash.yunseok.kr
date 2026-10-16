@@ -4,7 +4,7 @@ import { parseBackup } from "../backup-data.js";
 import { listCatalog, getCatalogProduct } from "./catalog.js";
 
 class ApiError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
+  constructor(status, message, retryAfter) { super(message); this.status = status; this.retryAfter = retryAfter; }
 }
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const token = () => randomBytes(32).toString("base64url");
@@ -59,6 +59,14 @@ export function createApp(db, { origin, rpID }) {
     const row = (await db.get("INSERT INTO rate_limits VALUES (?, 1, ?) ON CONFLICT(bucket) DO UPDATE SET count = rate_limits.count + 1 RETURNING count", bucket, Date.now() + 120000));
     if (row.count > (path === "/api/recover" ? 5 : 40)) throw new ApiError(429, "요청이 많아요. 잠시 후 다시 시도해 주세요.");
   };
+  // PostgreSQL makes these budgets shared across processes and restarts.
+  const registrationBudget = async (scope, maximum, windowMs) => {
+    const now = Date.now();
+    const end = (Math.floor(now / windowMs) + 1) * windowMs;
+    const bucket = hash(`registration:${scope}:${Math.floor(now / windowMs)}`);
+    const row = await db.get("INSERT INTO rate_limits VALUES (?, 1, ?) ON CONFLICT(bucket) DO UPDATE SET count = rate_limits.count + 1 WHERE rate_limits.count < ? RETURNING count", bucket, end + windowMs, maximum);
+    if (!row) throw new ApiError(429, "패스키 등록 한도에 도달했어요. 잠시 후 다시 시도해 주세요.", Math.max(1, Math.ceil((end - now) / 1000)));
+  };
   const readBody = async (request) => {
     if (!request.headers.get("content-type")?.startsWith("application/json")) throw new ApiError(415, "JSON 요청이 필요합니다.");
     const reader = request.body?.getReader();
@@ -106,6 +114,8 @@ export function createApp(db, { origin, rpID }) {
       if (!body || typeof body !== "object" || Array.isArray(body)) throw new ApiError(400, "요청 형식을 확인해 주세요.");
 
       if (path === "/api/register/options" && request.method === "POST") {
+        await registrationBudget(`options:ip:${address}`, 10, 3600000);
+        await registrationBudget("options:global", 100, 3600000);
         const existing = await session(request);
         const id = existing || randomUUID();
         const credentials = (await db.all("SELECT id, transports FROM credentials WHERE vault_id = ?", id));
@@ -126,11 +136,15 @@ export function createApp(db, { origin, rpID }) {
         let recoveryCode;
         const sessionCookie = await transaction(async () => {
           if (flow.kind === "register") {
+            await registrationBudget("vaults:global", 100, 86400000);
+            await registrationBudget(`vaults:ip:${address}`, 5, 86400000);
             (await db.run("INSERT INTO vaults(id, created_at) VALUES (?, ?)", flow.vault_id, Date.now()));
             recoveryCode = await issueRecovery(flow.vault_id);
           } else {
             await db.get("SELECT id FROM vaults WHERE id = ? FOR UPDATE", flow.vault_id);
             if (await session(request) !== flow.vault_id) throw new ApiError(401, "보관함을 다시 열어 주세요.");
+            const count = await db.get("SELECT count(*) AS count FROM credentials WHERE vault_id = ?", flow.vault_id);
+            if (Number(count.count) >= 10) throw new ApiError(400, "패스키는 최대 10개까지 등록할 수 있습니다.");
           }
           (await db.run("INSERT INTO credentials VALUES (?, ?, ?, ?, ?, ?)", credential.id, flow.vault_id, encode(credential.publicKey), credential.counter, JSON.stringify(credential.transports || []), Date.now()));
           return createSession(flow.vault_id);
@@ -195,7 +209,11 @@ export function createApp(db, { origin, rpID }) {
       }
       throw new ApiError(404, "요청을 찾을 수 없습니다.");
     } catch (error) {
-      if (error instanceof ApiError) return response({ error: error.message }, error.status);
+      if (error instanceof ApiError) {
+        const result = response({ error: error.message }, error.status);
+        if (error.retryAfter) result.headers.set("Retry-After", String(error.retryAfter));
+        return result;
+      }
       console.error("API request failed", error instanceof Error ? error.name : "UnknownError");
       return response({ error: "처리하지 못했어요. 잠시 후 다시 시도해 주세요." }, 500);
     }
