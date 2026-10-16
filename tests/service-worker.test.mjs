@@ -15,7 +15,7 @@ function worker({ put = async () => {}, fetch = async () => new Response('fresh'
   };
   runInNewContext(source, {
     self: { location: { origin }, addEventListener(type, fn) { handlers[type] = fn; }, async skipWaiting() {}, clients: { async claim() {} } },
-    caches: { async open() { return cache; }, async keys() { return ['other-app', 'carwash-offline-v16', 'carwash-offline-v18']; }, async delete() {} },
+    caches: { async open() { return cache; }, async keys() { return ['other-app', 'carwash-offline-v16', 'carwash-offline-v19']; }, async delete() {} },
     fetch, URL, Response, AbortController,
     setTimeout(fn, ms) { timers.push({ fn, ms, cleared: false }); return timers.length; },
     clearTimeout(id) { timers[id - 1].cleared = true; },
@@ -89,7 +89,7 @@ test('source install caches one HTML document and preserves standalone module de
   assert.equal(h.installed.filter(path => path === '/' || path === '/index.html').length, 1);
   assert.equal(new Set(h.installed).size, h.installed.length);
   assert.ok(h.installed.includes('/catalog-data.js'));
-  assert.match(source, /carwash-offline-v18/);
+  assert.match(source, /carwash-offline-v19/);
 });
 
 for (const [label, path, mode] of [['navigation', '/', 'navigate'], ['font', 'https://cdn.jsdelivr.net/npm/pretendard/font.woff2', 'cors']]) {
