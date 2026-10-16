@@ -1,5 +1,6 @@
 import { startRegistration, startAuthentication, browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { createVaultSync, SYNC_KEYS } from "./vault-sync.js";
+import { createPasskeyLogin } from "./passkey-login.js";
 
 const key = "carwash_yunseok_presets_v1";
 const status = document.getElementById("syncStatus");
@@ -10,6 +11,8 @@ const recoveryBox = document.getElementById("recoveryCodeBox");
 const codeOutput = document.getElementById("recoveryCodeOutput");
 const base = (window.CARWASH_API_BASE || "/api").replace(/\/$/, "");
 let busy = false;
+let interacted = false;
+let sessionMissing = false;
 
 class ApiError extends Error {
   constructor(statusCode, message) { super(message); this.statusCode = statusCode; }
@@ -44,6 +47,7 @@ function showSession(connected) {
 const sync = createVaultSync({ storage: localStorage, api, applyPresets,
   canApplyRemote: () => !document.getElementById("presetForm").classList.contains("is-open"),
   onState({ vaultId, phase, message, needsChoice }) {
+    sessionMissing = phase === "guest" || phase === "expired";
     showSession(vaultId);
     choice.hidden = !needsChoice;
     if (phase === "conflict") {
@@ -64,6 +68,10 @@ const sync = createVaultSync({ storage: localStorage, api, applyPresets,
   },
 });
 
+const login = createPasskeyLogin({ storage: localStorage, api, authenticate: startAuthentication,
+  connect: id => sync.connect(id),
+});
+
 function showRecovery(code) {
   if (!code) return;
   codeOutput.value = code;
@@ -75,35 +83,37 @@ async function register() {
   const { options } = await api("/register/options", "POST", {});
   const credential = await startRegistration({ optionsJSON: options });
   const result = await api("/register/verify", "POST", credential);
+  login.remember();
   showRecovery(result.recoveryCode);
   if (sync.vaultId === result.vaultId) showStatus("이 보관함에 패스키를 추가했습니다.");
   else await sync.connect(result.vaultId, { created: !!result.recoveryCode });
 }
 
+async function runAction(action, automatic = false) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll("#syncPanel button").forEach((button) => { button.disabled = true; });
+  try { await action(); }
+  catch (error) {
+    if (automatic && (error?.name === "NotAllowedError" || error?.name === "AbortError")) return;
+    if (error?.name === "NotAllowedError" || error?.name === "AbortError") showStatus("인증이 취소되었거나 시간이 초과됐어요. 다시 시도할 수 있습니다.");
+    else showStatus(error instanceof Error ? error.message : "처리하지 못했어요. 다시 시도해 주세요.");
+  } finally {
+    busy = false;
+    document.querySelectorAll("#syncPanel button").forEach((button) => { button.disabled = false; });
+  }
+}
+
 function bind(id, action) {
-  document.getElementById(id).addEventListener("click", async () => {
-    if (busy) return;
-    busy = true;
-    document.querySelectorAll("#syncPanel button").forEach((button) => { button.disabled = true; });
-    try { await action(); }
-    catch (error) {
-      if (error?.name === "NotAllowedError" || error?.name === "AbortError") showStatus("인증이 취소되었거나 시간이 초과됐어요. 다시 시도할 수 있습니다.");
-      else showStatus(error instanceof Error ? error.message : "처리하지 못했어요. 다시 시도해 주세요.");
-    } finally {
-      busy = false;
-      document.querySelectorAll("#syncPanel button").forEach((button) => { button.disabled = false; });
-    }
+  document.getElementById(id).addEventListener("click", () => {
+    interacted = true;
+    void runAction(action);
   });
 }
 
 bind("createVaultBtn", register);
 bind("addPasskeyBtn", register);
-bind("openVaultBtn", async () => {
-  const { options } = await api("/login/options", "POST", {});
-  const credential = await startAuthentication({ optionsJSON: options });
-  const result = await api("/login/verify", "POST", credential);
-  await sync.connect(result.vaultId);
-});
+bind("openVaultBtn", login.manual);
 bind("mergeCloudBtn", () => sync.choose("merge"));
 bind("useCloudBtn", () => sync.choose("cloud"));
 bind("useLocalBtn", () => sync.choose("local"));
@@ -111,11 +121,13 @@ bind("refreshCloudBtn", () => sync.refresh());
 bind("logoutVaultBtn", async () => {
   await sync.flush();
   await api("/logout", "POST", {});
+  login.pause();
   sync.disconnect();
 });
 bind("rotateRecoveryBtn", async () => { const result = await api("/recovery-code", "POST", {}); showRecovery(result.recoveryCode); showStatus("새 복구 코드가 발급되었습니다. 이전 코드는 사용할 수 없습니다."); });
 bind("recoverVaultBtn", async () => {
   const result = await api("/recover", "POST", { code: document.getElementById("recoveryInput").value });
+  login.pause(); // Recovery revokes every old passkey; registering a new one enables it again.
   document.getElementById("recoveryInput").value = "";
   showRecovery(result.recoveryCode);
   await sync.connect(result.vaultId);
@@ -139,4 +151,9 @@ if (!browserSupportsWebAuthn()) {
   document.getElementById("createVaultBtn").disabled = true;
   document.getElementById("openVaultBtn").disabled = true;
   showStatus("이 브라우저에서는 패스키를 사용할 수 없습니다. 기기 내 저장은 사용할 수 있어요.");
-} else { void sync.resume(); }
+} else {
+  void (async () => {
+    await sync.resume();
+    if (sessionMissing && !sync.vaultId && !interacted) await runAction(() => login.automatic(), true);
+  })();
+}
