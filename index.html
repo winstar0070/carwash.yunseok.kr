@@ -102,6 +102,13 @@
     .sync-panel p { margin: 8px 0; }
     .sync-panel textarea { width: 100%; min-height: 80px; resize: vertical; padding: 10px; overflow-wrap: anywhere; }
     .sync-panel .text-input { font-size: 16px; }
+    .vault-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin: 8px 0; }
+    .vault-toolbar .btn-ghost { background: transparent; padding: 8px; }
+    .vault-toolbar .btn-ghost:hover { background: var(--bg-elevated); }
+    .vault-management { flex: 1; min-width: 0; }
+    .vault-management > summary { width: fit-content; min-height: 44px; padding: 12px 8px; border-radius: var(--radius-sm); }
+    .vault-management > summary:hover { background: var(--bg-elevated); }
+    .vault-management .backup-actions { margin: 0; }
     .backup-panel, .sync-panel, .field-help, .pump-dose { word-break: keep-all; overflow-wrap: anywhere; }
     .readout-surface { border-top: 1px solid var(--border-subtle); padding-top: 24px; }
     .readout-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -556,11 +563,16 @@
             <button type="button" class="btn-ghost" id="openVaultBtn">패스키로 불러오기</button>
           </div>
           <div id="syncAccountActions" hidden>
-            <div class="backup-actions">
-              <button type="button" class="btn-ghost" id="refreshCloudBtn">최신 목록 확인</button>
-              <button type="button" class="btn-ghost" id="addPasskeyBtn">패스키 추가</button>
-              <button type="button" class="btn-ghost" id="rotateRecoveryBtn">복구 코드 재발급</button>
-              <button type="button" class="btn-ghost" id="logoutVaultBtn">보관함 닫기</button>
+            <div class="vault-toolbar">
+              <button type="button" class="btn-ghost" id="refreshCloudBtn" aria-label="최신 목록 확인">새로고침</button>
+              <details class="vault-management">
+                <summary>보관함 관리</summary>
+                <div class="backup-actions">
+                  <button type="button" class="btn-ghost" id="addPasskeyBtn">패스키 추가</button>
+                  <button type="button" class="btn-ghost" id="rotateRecoveryBtn">복구 코드 재발급</button>
+                  <button type="button" class="btn-ghost" id="logoutVaultBtn">보관함 닫기</button>
+                </div>
+              </details>
             </div>
           </div>
           <div id="syncChoice" hidden>
