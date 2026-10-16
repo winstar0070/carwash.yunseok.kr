@@ -59,6 +59,15 @@
     .page-description { margin-top: 8px; font-size: 14px; color: var(--text-secondary); }
     .workspace, .calc-column { display: flex; flex-direction: column; }
     .calc-column { gap: 28px; }
+    .today-condition { min-width: 0; border: 0; padding-bottom: 24px; border-bottom: 1px solid var(--border-subtle); }
+    .today-condition legend { margin-bottom: 6px; }
+    .condition-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+    .condition-option { position: relative; cursor: pointer; }
+    .condition-option input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .condition-option span { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); }
+    .condition-option:hover span { background: var(--bg-elevated); }
+    .condition-option input:checked + span { background: var(--bg-elevated); border-color: var(--border-focus); color: var(--text-primary); font-weight: 650; }
+    .condition-option input:focus-visible + span { outline: 2px solid var(--border-focus); outline-offset: 3px; }
     .control-header, .shelf-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
     .control-title, .shelf-title-wrap h2 { font-size: 16px; font-weight: 650; letter-spacing: -.02em; }
     .unit-toggle { display: flex; gap: 2px; }
@@ -214,6 +223,15 @@
 
     <main class="workspace">
       <section class="calc-column" aria-label="원액 용량 계산기">
+        <fieldset class="today-condition" id="todayCondition" aria-describedby="todayConditionHelp">
+          <legend class="control-title">오늘 상태 선택</legend>
+          <p class="field-help" id="todayConditionHelp">오늘 차량의 오염 정도를 선택하세요.</p>
+          <div class="condition-options">
+            <label class="condition-option"><input type="radio" name="todayCondition" value="light" /><span>가벼움</span></label>
+            <label class="condition-option"><input type="radio" name="todayCondition" value="normal" /><span>보통</span></label>
+            <label class="condition-option"><input type="radio" name="todayCondition" value="heavy" /><span>심함</span></label>
+          </div>
+        </fieldset>
         <!-- Step 1: Water Volume -->
         <div class="control-group">
           <div class="control-header">
@@ -427,7 +445,7 @@
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            <span>프리셋 추가</span>
+            <span>제품 추가</span>
           </button>
         </div>
 
@@ -1348,6 +1366,33 @@
       loadStorage();
       syncInputsFromState();
       updateCalculations();
+    })();
+  </script>
+  <script>
+    (() => {
+      const key = "carwash_today_condition_v1";
+      const field = document.getElementById("todayCondition");
+      const options = [...field.querySelectorAll('input[type="radio"]')];
+      const today = () => new Date().toLocaleDateString("sv-SE");
+      let selection = null;
+
+      function refresh() {
+        try { selection = JSON.parse(localStorage.getItem(key)); } catch { /* Keep the current selection when storage is unavailable. */ }
+        for (const option of options) {
+          option.checked = selection?.date === today() && selection?.value === option.value;
+        }
+      }
+
+      field.addEventListener("change", event => {
+        if (!options.includes(event.target)) return;
+        selection = { date: today(), value: event.target.value };
+        try { localStorage.setItem(key, JSON.stringify(selection)); } catch { /* Selection also works without storage. */ }
+      });
+      window.addEventListener("pageshow", refresh);
+      window.addEventListener("focus", refresh);
+      window.addEventListener("storage", event => { if (event.key === key || event.key === null) refresh(); });
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+      refresh();
     })();
   </script>
 </body>
