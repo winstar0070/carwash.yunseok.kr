@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="세차 계산기" />
   <script src="/pwa.js" defer></script>
-  <script src="/backup.js" type="module"></script>
   <script src="/config.js"></script>
   <script src="/sync.js" type="module"></script>
   <script src="/catalog-picker.js" type="module"></script>
@@ -90,13 +89,7 @@
     .pump-setting input { width: 100px; }
     .pump-dose { margin-top: 10px; font-size: 16px; font-weight: 600; }
     .field-help { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
-    .backup-panel { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
-    .backup-panel summary { cursor: pointer; padding: 10px 0; color: var(--text-primary); }
-    .backup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-    .backup-file-label { display: inline-flex; align-items: center; cursor: pointer; }
-    .backup-file-label:focus-within { outline: 2px solid var(--text-primary); outline-offset: 3px; }
-    .file-input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
-    .backup-status { margin-top: 8px; overflow-wrap: anywhere; }
+    .sync-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
     .sync-panel { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
     .sync-panel summary { cursor: pointer; padding: 10px 0; color: var(--text-primary); }
     .sync-panel p { margin: 8px 0; }
@@ -108,8 +101,8 @@
     .vault-management { flex: 1; min-width: 0; }
     .vault-management > summary { width: fit-content; min-height: 44px; padding: 12px 8px; border-radius: var(--radius-sm); }
     .vault-management > summary:hover { background: var(--bg-elevated); }
-    .vault-management .backup-actions { margin: 0; }
-    .backup-panel, .sync-panel, .field-help, .pump-dose { word-break: keep-all; overflow-wrap: anywhere; }
+    .vault-management .sync-actions { margin: 0; }
+    .sync-panel, .field-help, .pump-dose { word-break: keep-all; overflow-wrap: anywhere; }
     .readout-surface { border-top: 1px solid var(--border-subtle); padding-top: 24px; }
     .readout-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .result-heading { font-size: 16px; font-weight: 650; }
@@ -537,28 +530,10 @@
           <span id="presetStorageStatus" role="status">이 기기의 브라우저에 저장됩니다.</span>
           <button type="button" class="reset-defaults-btn" id="resetPresetsBtn">기본 목록 복원</button>
         </div>
-        <details class="backup-panel" id="backupPanel">
-          <summary>제품 목록 백업 · 불러오기</summary>
-          <p>제품 목록을 JSON 파일로 보관하거나 다른 기기로 옮겨 사용할 수 있어요.</p>
-          <div class="backup-actions">
-            <button type="button" class="btn-ghost" id="exportBackupBtn">백업 내보내기</button>
-            <label class="btn-ghost backup-file-label">백업 파일 선택
-              <input type="file" class="file-input" id="backupFileInput" accept=".json,application/json" />
-            </label>
-          </div>
-          <div id="backupPreview" hidden>
-            <p id="backupPreviewNames"></p>
-            <div class="backup-actions">
-              <button type="button" class="btn-primary" id="applyBackupBtn">이 목록 추가하기</button>
-              <button type="button" class="btn-ghost" id="cancelBackupBtn">취소</button>
-            </div>
-          </div>
-          <p class="backup-status" id="backupStatus" role="status"></p>
-        </details>
         <details class="sync-panel" id="syncPanel">
           <summary id="vaultLabel">패스키로 내 보관함 열기</summary>
           <p>패스키로 열면 제품 추가·수정·삭제가 서버에 자동 저장됩니다. 다른 기기에서도 같은 보관함을 불러오세요.</p>
-          <div class="backup-actions" id="syncGuestActions">
+          <div class="sync-actions" id="syncGuestActions">
             <button type="button" class="btn-primary" id="createVaultBtn">내 보관함 만들기</button>
             <button type="button" class="btn-ghost" id="openVaultBtn">패스키로 불러오기</button>
           </div>
@@ -567,7 +542,7 @@
               <button type="button" class="btn-ghost" id="refreshCloudBtn" aria-label="최신 목록 확인">새로고침</button>
               <details class="vault-management">
                 <summary>보관함 관리</summary>
-                <div class="backup-actions">
+                <div class="sync-actions">
                   <button type="button" class="btn-ghost" id="addPasskeyBtn">패스키 추가</button>
                   <button type="button" class="btn-ghost" id="rotateRecoveryBtn">복구 코드 재발급</button>
                   <button type="button" class="btn-ghost" id="logoutVaultBtn">보관함 닫기</button>
@@ -577,7 +552,7 @@
           </div>
           <div id="syncChoice" hidden>
             <p id="syncChoiceText"></p>
-            <div class="backup-actions">
+            <div class="sync-actions">
               <button type="button" class="btn-primary" id="mergeCloudBtn">두 목록 합치기</button>
               <button type="button" class="btn-ghost" id="useCloudBtn">서버 목록 사용</button>
               <button type="button" class="btn-ghost" id="useLocalBtn">기기 목록으로 서버 덮어쓰기</button>
@@ -587,7 +562,7 @@
             <label for="recoveryCodeOutput">복구 코드 · 지금 별도로 보관해 주세요</label>
             <textarea id="recoveryCodeOutput" class="text-input" readonly spellcheck="false"></textarea>
             <p>패스키를 모두 잃었을 때 사용합니다. 다른 사람에게 공유하지 마세요.</p>
-            <div class="backup-actions">
+            <div class="sync-actions">
               <button type="button" class="btn-ghost" id="saveRecoveryBtn">복구 코드 파일 저장</button>
               <button type="button" class="btn-ghost" id="hideRecoveryBtn">보관했어요</button>
             </div>
