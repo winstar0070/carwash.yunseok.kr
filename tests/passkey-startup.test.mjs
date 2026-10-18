@@ -6,7 +6,7 @@ import { createPasskeyLogin, AUTO_LOGIN_KEY } from "../passkey-login.js";
 import { createVaultSync } from "../vault-sync.js";
 
 const source = (await readFile(new URL("../sync.js", import.meta.url), "utf8")).replace(/^import .*;\n/gm, "");
-async function page({ session = false, supported = true, remembered = true, offline = false, cancel = false } = {}) {
+async function page({ session = false, supported = true, remembered = true, offline = false, cancel = false, legacyServer = false } = {}) {
   const elements = new Map(), calls = [], listeners = new Map();
   const element = id => {
     if (!elements.has(id)) elements.set(id, { hidden: false, disabled: false, value: "", textContent: "", classList: { contains: () => false },
@@ -19,21 +19,30 @@ async function page({ session = false, supported = true, remembered = true, offl
   let authenticated = session;
   const context = {
     createPasskeyLogin, createVaultSync, SYNC_KEYS: (await import("../vault-sync.js")).SYNC_KEYS,
-    startRegistration: async () => ({}),
+    startRegistration: async () => { calls.push("registrar"); return { id: "new-key" }; },
     startAuthentication: async () => { calls.push("authenticator"); if (cancel) throw Object.assign(Error("cancelled"), { name: "NotAllowedError" }); return { id: "assertion" }; },
     browserSupportsWebAuthn: () => supported,
     localStorage: storage, AbortController, Event, setTimeout, clearTimeout, setInterval() {},
     window: { addEventListener() {}, dispatchEvent() {} },
     document: { getElementById: element, querySelectorAll: () => [...elements.values()], addEventListener() {} },
     fetch: async (url, init) => {
-      const path = url.replace("/api", ""); calls.push(path);
+      const parsed = new URL(url, "http://localhost");
+      const path = parsed.pathname.replace("/api", ""); calls.push(path);
       if (offline) throw new TypeError("offline");
       let status = 200, data;
       if (path === "/session") { status = authenticated ? 200 : 401; data = authenticated ? { vaultId: "vault-a" } : { error: "login required" }; }
       if (path === "/login/options") data = { options: { challenge: "fresh" } };
       if (path === "/login/verify") { assert.deepEqual(JSON.parse(init.body), { id: "assertion" }); authenticated = true; data = { vaultId: "vault-a" }; }
-      if (path === "/presets") data = { presets: [], revision: 0 };
-      if (path === "/logout") { authenticated = false; data = {}; }
+      if (path === "/register/options") {
+        assert.equal(JSON.parse(init.body).vaultId, authenticated ? "vault-a" : null);
+        data = { options: {}, ...(legacyServer ? {} : { vaultId: authenticated ? "vault-a" : null }) };
+      }
+      if (path === "/register/verify") {
+        assert.equal(JSON.parse(init.body).vaultId, authenticated ? "vault-a" : null);
+        data = { vaultId: "vault-a", ...(authenticated ? {} : { recoveryCode: "new-recovery" }) }; authenticated = true;
+      }
+      if (path === "/presets") { assert.equal(parsed.searchParams.get("vaultId"), "vault-a"); data = { ...(legacyServer ? {} : { vaultId: "vault-a" }), presets: [], revision: 0 }; }
+      if (path === "/logout") { assert.equal(JSON.parse(init.body).vaultId, "vault-a"); authenticated = false; data = {}; }
       return { ok: status === 200, status, json: async () => data };
     },
   };
@@ -76,4 +85,32 @@ test("new visitors, offline startup and unsupported browsers do not attempt auth
     assert.equal(h.calls.includes("/login/options"), false);
     assert.equal(h.calls.includes("authenticator"), false);
   }
+});
+
+test("detecting an old server disables all account mutations, even direct stale button events", async () => {
+  const h = await page({ session: true, legacyServer: true });
+  const calls = h.calls.length;
+  for (const id of ['addPasskeyBtn', 'rotateRecoveryBtn', 'logoutVaultBtn']) {
+    h.click(id); await h.settle();
+  }
+  assert.equal(h.elements.get('syncAccountActions').hidden, true);
+  assert.equal(h.calls.length, calls, 'unsupported account operations must never reach an old API');
+});
+
+test("new-vault and additional-passkey registration preserve their explicit target", async () => {
+  for (const session of [false, true]) {
+    const h = await page({ session, remembered: false });
+    h.click(session ? 'addPasskeyBtn' : 'createVaultBtn'); await h.settle();
+    assert.ok(h.calls.includes('registrar'));
+    assert.ok(h.calls.includes('/register/verify'));
+    assert.equal(h.elements.get('syncAccountActions').hidden, false);
+  }
+});
+
+test("new visitors never verify registration against an old server with unknown target binding", async () => {
+  const h = await page({ legacyServer: true, remembered: false });
+  h.click('createVaultBtn'); await h.settle();
+  assert.ok(h.calls.includes('/register/options'));
+  assert.equal(h.calls.includes('registrar'), false);
+  assert.equal(h.calls.includes('/register/verify'), false);
 });

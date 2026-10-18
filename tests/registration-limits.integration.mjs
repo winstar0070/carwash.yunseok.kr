@@ -28,26 +28,26 @@ test("registration quotas persist across instances and concurrent requests", asy
       return { status: response.status, data: await response.json(), headers: response.headers };
     };
   }
-  async function register(request) {
-    const options = await request("/register/options");
+  async function register(request, vaultId = null) {
+    const options = await request("/register/options", { vaultId });
     assert.equal(options.status, 200);
-    return request("/register/verify", authenticator().register(options.data.options));
+    return request("/register/verify", { ...authenticator().register(options.data.options), vaultId });
   }
   try {
     await t.test("IP options quota survives cookies, headers and app restarts", async () => {
       const address = randomUUID();
-      for (let i = 0; i < 10; i++) assert.equal((await client(address)("/register/options")).status, 200);
-      const blocked = await client(address)("/register/options");
+      for (let i = 0; i < 10; i++) assert.equal((await client(address)("/register/options", { vaultId: null })).status, 200);
+      const blocked = await client(address)("/register/options", { vaultId: null });
       assert.equal(blocked.status, 429);
       assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
       assert.equal(Number((await db.get("SELECT count(*) AS count FROM challenges")).count), 10);
       assert.equal((await client(address)("/login/options")).status, 200, "registration limits do not block login");
-      assert.equal((await client()("/register/options")).status, 200);
+      assert.equal((await client()("/register/options", { vaultId: null })).status, 200);
     });
     await db.run("TRUNCATE rate_limits, challenges");
     await t.test("global options quota bounds anonymous challenge creation", async () => {
-      for (let i = 0; i < 100; i++) assert.equal((await client()("/register/options")).status, 200);
-      assert.equal((await client()("/register/options")).status, 429);
+      for (let i = 0; i < 100; i++) assert.equal((await client()("/register/options", { vaultId: null })).status, 200);
+      assert.equal((await client()("/register/options", { vaultId: null })).status, 429);
       assert.equal(Number((await db.get("SELECT count(*) AS count FROM challenges")).count), 100);
     });
     await db.run("TRUNCATE rate_limits, challenges");
@@ -75,24 +75,25 @@ test("registration quotas persist across instances and concurrent requests", asy
       const owner = client(randomUUID(), cookies);
       const created = await register(owner);
       assert.equal(created.status, 200);
-      for (let i = 1; i < 9; i++) assert.equal((await register(client(randomUUID(), new Map(cookies)))).status, 200);
+      for (let i = 1; i < 9; i++) assert.equal((await register(client(randomUUID(), new Map(cookies)), created.data.vaultId)).status, 200);
       const pending = await Promise.all(Array.from({ length: 3 }, async () => {
         const request = client(randomUUID(), new Map(cookies));
-        const options = await request("/register/options");
+        const vaultId = created.data.vaultId;
+        const options = await request("/register/options", { vaultId });
         assert.equal(options.status, 200);
-        return () => request("/register/verify", authenticator().register(options.data.options));
+        return () => request("/register/verify", { ...authenticator().register(options.data.options), vaultId });
       }));
       assert.deepEqual((await Promise.all(pending.map((verify) => verify()))).map((r) => r.status).sort(), [200, 400, 400]);
       assert.equal(Number((await db.get("SELECT count(*) AS count FROM credentials WHERE vault_id = ?", created.data.vaultId)).count), 10);
-      assert.equal((await owner("/register/options")).status, 400);
+      assert.equal((await owner("/register/options", { vaultId: created.data.vaultId })).status, 400);
     });
     await db.run("TRUNCATE rate_limits, challenges");
     await t.test("hourly and daily budgets reopen at the next UTC window", async (t) => {
       const now = Date.UTC(2026, 9, 16, 12, 30);
       t.mock.timers.enable({ apis: ["Date"], now });
       const address = randomUUID();
-      for (let i = 0; i < 10; i++) assert.equal((await client(address)("/register/options")).status, 200);
-      assert.equal((await client(address)("/register/options")).status, 429);
+      for (let i = 0; i < 10; i++) assert.equal((await client(address)("/register/options", { vaultId: null })).status, 200);
+      assert.equal((await client(address)("/register/options", { vaultId: null })).status, 429);
       t.mock.timers.setTime(now + 3600000);
       for (let i = 0; i < 5; i++) assert.equal((await register(client(address))).status, 200);
       assert.equal((await register(client(address))).status, 429);
@@ -104,8 +105,8 @@ test("registration quotas persist across instances and concurrent requests", asy
       const address = randomUUID();
       const request = client(address);
       const before = Number((await db.get("SELECT count(*) AS count FROM vaults")).count);
-      assert.equal((await request("/register/options")).status, 200);
-      assert.equal((await request("/register/verify", { id: "invalid" })).status, 400);
+      assert.equal((await request("/register/options", { vaultId: null })).status, 200);
+      assert.equal((await request("/register/verify", { id: "invalid", vaultId: null })).status, 400);
       assert.equal(Number((await db.get("SELECT count(*) AS count FROM vaults")).count), before);
       for (let i = 0; i < 5; i++) assert.equal((await register(client(address))).status, 200);
       assert.equal((await register(client(address))).status, 429);

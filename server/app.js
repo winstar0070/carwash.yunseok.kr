@@ -27,6 +27,11 @@ export function createApp(db, { origin, rpID }) {
     if (!id) throw new ApiError(401, "패스키로 보관함을 먼저 열어 주세요.");
     return id;
   };
+  // Cookies are shared by tabs; bind each account operation to the caller's intent.
+  const requireTarget = (expected, actual) => {
+    if (expected === undefined) throw new ApiError(428, "새로고침 후 보관함을 다시 열어 주세요. 변경사항은 기기에 남아 있습니다.");
+    if (expected !== actual) throw new ApiError(401, "다른 탭에서 보관함이 바뀌었습니다. 사용할 보관함을 다시 열어 주세요.");
+  };
   const response = (data, status = 200, cookies = []) => {
     const headers = new Headers({ "Content-Type": "application/json", "Cache-Control": "no-store", "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", "Vary": "Origin", "X-Content-Type-Options": "nosniff" });
     for (const value of cookies) headers.append("Set-Cookie", value);
@@ -100,8 +105,9 @@ export function createApp(db, { origin, rpID }) {
         const id = await requireSession(request);
         if (path === "/api/session") return response({ vaultId: id, passkeys: (await db.get("SELECT count(*) AS count FROM credentials WHERE vault_id = ?", id)).count });
         if (path === "/api/presets") {
+          requireTarget(new URL(request.url).searchParams.get("vaultId") ?? undefined, id);
           const row = (await db.get("SELECT presets, revision FROM vaults WHERE id = ?", id));
-          return response({ presets: JSON.parse(row.presets), revision: row.revision });
+          return response({ vaultId: id, presets: JSON.parse(row.presets), revision: row.revision });
         }
       }
       if (!["POST", "PUT"].includes(request.method)) throw new ApiError(404, "요청을 찾을 수 없습니다.");
@@ -111,19 +117,22 @@ export function createApp(db, { origin, rpID }) {
       if (!body || typeof body !== "object" || Array.isArray(body)) throw new ApiError(400, "요청 형식을 확인해 주세요.");
 
       if (path === "/api/register/options" && request.method === "POST") {
+        const existing = await session(request);
+        requireTarget(body.vaultId, existing || null);
         await registrationBudget(`options:ip:${address}`, 10, 3600000);
         await registrationBudget("options:global", 100, 3600000);
-        const existing = await session(request);
         const id = existing || randomUUID();
         const credentials = (await db.all("SELECT id, transports FROM credentials WHERE vault_id = ?", id));
         if (credentials.length >= 10) throw new ApiError(400, "패스키는 최대 10개까지 등록할 수 있습니다.");
         const options = await generateRegistrationOptions({ rpName: "세차 계산기", rpID, userID: new TextEncoder().encode(id), userName: `보관함 ${id.slice(0, 8)}`, attestationType: "none", authenticatorSelection: { residentKey: "required", userVerification: "required" }, supportedAlgorithmIDs: [-7, -257], excludeCredentials: credentials.map((row) => ({ id: row.id, transports: JSON.parse(row.transports) })) });
-        return response({ options }, 200, [await issueChallenge(existing ? "add" : "register", id, options.challenge)]);
+        return response({ options, vaultId: existing || null }, 200, [await issueChallenge(existing ? "add" : "register", id, options.challenge)]);
       }
       if (path === "/api/register/verify" && request.method === "POST") {
         const flowToken = readCookie(request, "carwash_flow");
         const flow = (await db.get("DELETE FROM challenges WHERE token_hash = ? RETURNING *", hash(flowToken)));
         if (!flow || !["register", "add"].includes(flow.kind) || flow.expires_at < Date.now()) throw new ApiError(400, "인증 요청이 만료되었습니다.");
+        requireTarget(body.vaultId, flow.kind === "add" ? flow.vault_id : null);
+        requireTarget(body.vaultId, await session(request) || null);
         if (flow.kind === "add" && await session(request) !== flow.vault_id) throw new ApiError(401, "보관함을 다시 열어 주세요.");
         let verification;
         try { verification = await verifyRegistrationResponse({ response: body, expectedChallenge: flow.challenge, expectedOrigin: origin, expectedRPID: rpID, requireUserVerification: true }); }
@@ -186,6 +195,7 @@ export function createApp(db, { origin, rpID }) {
         return response({ vaultId: result.vaultId, recoveryCode: result.recoveryCode, recovered: true }, 200, [result.sessionCookie]);
       }
       const id = await requireSession(request);
+      if (["/api/logout", "/api/recovery-code", "/api/presets"].includes(path)) requireTarget(body.vaultId, id);
       if (path === "/api/logout" && request.method === "POST") {
         (await db.run("DELETE FROM sessions WHERE token_hash = ?", hash(readCookie(request, "carwash_session"))));
         return response({ ok: true }, 200, [cookie("carwash_session", "", 0), cookie("carwash_flow", "", 0)]);
@@ -202,7 +212,7 @@ export function createApp(db, { origin, rpID }) {
         if (unique.size !== presets.length) throw new ApiError(400, "제품 ID가 중복되었습니다.");
         const updated = (await db.get("UPDATE vaults SET presets = ?, revision = revision + 1 WHERE id = ? AND revision = ? RETURNING revision", JSON.stringify(presets), id, body.revision));
         if (!updated) throw new ApiError(409, "다른 기기에서 변경된 목록이 있습니다. 목록을 비교해 주세요.");
-        return response({ revision: updated.revision, presets });
+        return response({ vaultId: id, revision: updated.revision, presets });
       }
       throw new ApiError(404, "요청을 찾을 수 없습니다.");
     } catch (error) {

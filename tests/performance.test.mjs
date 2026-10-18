@@ -122,3 +122,58 @@ test('always visible concentration header stays current without opening measurin
   assert.equal(h.element('ratioPercentageText').textContent, '원액 농도 2.00%');
   assert.equal(h.element('cylinderTicks').renders, 0);
 });
+
+test('invalid water and ratio inputs clear stale results and recover when corrected', () => {
+  for (const id of ['waterInput', 'ratioInput']) {
+    for (const value of ['', '0', '-1', 'Infinity']) {
+      const h = calculator();
+      h.element('measuringDetails').open = true;
+      h.element('measuringDetails').listeners.toggle();
+      h.input(id, value);
+      assert.equal(h.element('doseResultValue').textContent, '—', `${id}=${value}`);
+      assert.equal(h.element('copyResultBtn').disabled, true);
+      assert.equal(h.element('togglePresetFormBtn').disabled, true);
+      assert.equal(h.element('totalVolumeText').textContent, '—');
+      h.input(id, id === 'waterInput' ? '20' : '100');
+      assert.equal(h.element('doseResultValue').textContent, id === 'waterInput' ? '40' : '150');
+      assert.equal(h.element('copyResultBtn').disabled, false);
+      assert.equal(h.element('togglePresetFormBtn').disabled, false);
+    }
+  }
+});
+
+test('deletion during invalid concentration renders, persists and notifies sync immediately', () => {
+  const h = calculator();
+  h.element('percentModeBtn').listeners.click();
+  h.input('percentInput', '100');
+  const before = JSON.parse(h.values.get('carwash_yunseok_presets_v1'));
+  h.events.length = 0;
+  const button = { dataset: { action: 'delete', id: before[0].id } };
+  h.element('presetList').listeners.click({ target: { closest: () => button }, stopPropagation() {} });
+  const after = JSON.parse(h.values.get('carwash_yunseok_presets_v1'));
+  assert.equal(after.length, before.length - 1);
+  assert.equal(after.some(row => row.id === before[0].id), false);
+  assert.doesNotMatch(h.element('presetList').innerHTML, /중성 카샴푸 표준/);
+  assert.ok(h.events.includes('carwash-presets-changed'));
+  assert.equal(h.element('doseResultValue').textContent, '—');
+  h.listeners['carwash-presets-imported']();
+  assert.equal(h.element('percentInput').value, '100', 'a server save acknowledgment must preserve unfinished calculator input');
+  assert.equal(h.element('doseResultValue').textContent, '—');
+});
+
+test('a draft opened in A cannot be saved into B after another tab switches the shared list', () => {
+  const h = calculator();
+  h.values.set('carwash_local_owner_v1', 'vault-a');
+  h.element('togglePresetFormBtn').listeners.click();
+  h.element('presetNameInput').value = 'A 비공개 작성 내용';
+  h.element('presetRatioInput').value = '100';
+  h.element('presetWaterInput').value = '2';
+  const b = [{ id: 'b', name: 'B 제품', category: '카샴푸', ratio: 500, waterL: 15 }];
+  h.values.set('carwash_yunseok_presets_v1', JSON.stringify(b));
+  h.values.set('carwash_local_owner_v1', 'vault-b');
+  h.listeners.storage({ key: 'carwash_yunseok_presets_v1' });
+  h.element('presetForm').listeners.submit({ preventDefault() {} });
+  assert.deepEqual(JSON.parse(h.values.get('carwash_yunseok_presets_v1')), b);
+  assert.equal(h.element('presetNameInput').value, 'A 비공개 작성 내용');
+  assert.match(h.element('presetFormError').textContent, /보관함/);
+});

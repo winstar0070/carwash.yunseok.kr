@@ -34,7 +34,7 @@ function replayEdits(accepted, before, after, ids) {
 }
 
 export function createVaultSync({ storage, api, applyPresets, onState, canApplyRemote = () => true, setTimer = setTimeout, clearTimer = clearTimeout }) {
-  let vaultId = null, ready = false, conflict = false, resolving = false;
+  let vaultId = null, ready = false, conflict = false, resolving = false, compatible = false;
   let epoch = 0, flight = null, refreshing = null, resuming = null, retryTimer, retryDelay = 1000;
   const read = (key, fallback) => JSON.parse(storage.getItem(key) || JSON.stringify(fallback));
   const local = () => read(SYNC_KEYS.presets, []);
@@ -43,6 +43,16 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
   const write = (id, entry) => storage.setItem(SYNC_KEYS.queue, JSON.stringify({ ...read(SYNC_KEYS.queue, {}), [id]: entry }));
   const valid = (version, id) => epoch === version && vaultId === id;
   const notify = (phase, message) => onState({ vaultId, phase, message, needsChoice: conflict });
+  async function presetsRequest(id, body) {
+    const version = epoch;
+    const result = body === undefined
+      ? await api(`/presets?vaultId=${encodeURIComponent(id)}`)
+      : await api("/presets", "PUT", { ...body, vaultId: id });
+    if (result.vaultId === undefined) throw Object.assign(new Error("동기화 서버 업데이트가 필요합니다. 변경사항은 이 기기에 보관됩니다."), { statusCode: 428 });
+    if (result.vaultId !== id) throw Object.assign(new Error("보관함이 바뀌었습니다. 다시 열어 주세요."), { statusCode: 401 });
+    if (valid(version, id)) compatible = true;
+    return { presets: result.presets, revision: result.revision };
+  }
   const clearRetry = () => { clearTimer(retryTimer); retryTimer = undefined; };
   const saved = (updated = false) => { clearRetry(); retryDelay = 1000; notify(updated ? "updated" : "saved", updated ? "서버에서 바뀐 제품 목록을 불러왔습니다. 변경사항은 자동 저장됩니다." : "제품 추가·수정·삭제가 서버에 자동 저장됩니다."); };
   const showConflict = () => {
@@ -58,10 +68,11 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
   function failure(error) {
     if (error.statusCode === 401) {
       const hadAccount = !!vaultId || !!owner();
-      epoch++; vaultId = null; ready = false; conflict = false; clearRetry();
+      epoch++; vaultId = null; ready = false; compatible = false; conflict = false; clearRetry();
       notify(hadAccount ? "expired" : "guest", hadAccount ? "변경사항은 이 기기에 보관했습니다. 패스키로 다시 열면 자동으로 저장합니다." : "계정 정보 입력 없이 패스키로 시작할 수 있어요.");
     } else if (error.statusCode === 409) showConflict();
     else if (error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 429) {
+      if (error.statusCode === 428) { ready = false; compatible = false; }
       notify("error", error.message);
     } else {
       notify("offline", "변경사항은 이 기기에 보관했습니다. 연결되면 자동으로 다시 저장합니다.");
@@ -80,7 +91,7 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
 
   async function connect(id, { created = false } = {}) {
     const version = ++epoch;
-    clearRetry(); vaultId = id; ready = false; conflict = false;
+    clearRetry(); vaultId = id; ready = false; compatible = false; conflict = false;
     notify("loading", "보관함을 연결하고 있어요. 연결 후 변경사항은 자동으로 저장됩니다.");
     try {
       const previousOwner = owner();
@@ -93,7 +104,7 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
       const entry = queued(id);
       if (previousOwner !== id && entry?.dirty) applyPresets(entry.presets, id);
       const initial = local();
-      const remote = await api("/presets");
+      const remote = await presetsRequest(id);
       if (!valid(version, id)) return;
       const current = local(), pending = queued(id);
       if (previousOwner === id || entry?.dirty) {
@@ -116,7 +127,7 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
   }
 
   function flush() {
-    if (!vaultId || !ready || conflict || resolving || owner() !== vaultId) return Promise.resolve();
+    if (!vaultId || !ready || !compatible || conflict || resolving || owner() !== vaultId) return Promise.resolve();
     if (flight?.epoch === epoch) return flight.promise;
     const id = vaultId, version = epoch;
     const promise = (async () => {
@@ -127,7 +138,7 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
           if (!entry?.dirty) return;
           const snapshot = entry.presets;
           notify("saving", "변경사항을 서버에 저장하고 있어요.");
-          const result = await api("/presets", "PUT", { presets: snapshot, revision: entry.revision });
+          const result = await presetsRequest(id, { presets: snapshot, revision: entry.revision });
           if (!valid(version, id) || owner() !== id) return;
           const latest = local(), changed = !same(latest, snapshot);
           write(id, { presets: changed ? latest : result.presets, revision: result.revision, dirty: changed });
@@ -154,7 +165,7 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
       await flush();
       if (!valid(version, id) || !ready || conflict || resolving || queued(id)?.dirty) return;
       try {
-        const remote = await api("/presets");
+        const remote = await presetsRequest(id);
         if (!valid(version, id)) return;
         remember();
         if (remote.revision < queued(id)?.revision) return;
@@ -194,11 +205,11 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
     const version = epoch, id = vaultId;
     resolving = true; clearRetry();
     try {
-      const remote = await api("/presets");
+      const remote = await presetsRequest(id);
       if (!valid(version, id)) return;
       const before = local();
       const selection = mode === "merge" ? mergeRows(remote.presets, before) : { rows: mode === "cloud" ? remote.presets : before, ids: new Map() };
-      const result = mode === "cloud" ? remote : await api("/presets", "PUT", { presets: selection.rows, revision: remote.revision });
+      const result = mode === "cloud" ? remote : await presetsRequest(id, { presets: selection.rows, revision: remote.revision });
       if (!valid(version, id)) return;
       const latest = local();
       const rows = same(latest, before) ? result.presets : replayEdits(result.presets, before, latest, selection.ids);
@@ -211,10 +222,12 @@ export function createVaultSync({ storage, api, applyPresets, onState, canApplyR
   }
 
   function disconnect() {
-    remember(); epoch++; vaultId = null; ready = false; conflict = false; clearRetry();
+    remember(); epoch++; vaultId = null; ready = false; compatible = false; conflict = false; clearRetry();
     applyPresets(read(SYNC_KEYS.guest, []), null);
     notify("guest", "보관함을 닫았습니다. 다시 열면 계정의 목록을 불러올 수 있습니다.");
   }
 
-  return { connect, changed, flush, resume, refresh, choose, disconnect, get vaultId() { return vaultId; } };
+  return { connect, changed, flush, resume, refresh, choose, disconnect,
+    get vaultId() { return vaultId; }, get canManageAccount() { return !!vaultId && compatible; },
+  };
 }

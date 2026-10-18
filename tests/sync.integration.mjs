@@ -39,16 +39,16 @@ test("PostgreSQL: authenticated automatic changes, reconnect, cross-device refre
   try {
     const a = client(), b = client(), other = client();
     const device = authenticator();
-    const options = await a.api("/register/options", "POST", {});
-    const account = await a.api("/register/verify", "POST", device.register(options.options)); ids.push(account.vaultId);
+    const options = await a.api("/register/options", "POST", { vaultId: null });
+    const account = await a.api("/register/verify", "POST", { ...device.register(options.options), vaultId: null }); ids.push(account.vaultId);
     const syncA = a.makeSync(); await syncA.connect(account.vaultId, { created: true });
-    assert.deepEqual((await a.api("/presets")).presets, [row("guest")]);
+    assert.deepEqual((await a.api(`/presets?vaultId=${account.vaultId}`)).presets, [row("guest")]);
     a.edit([row("guest"), row("added")]); await syncA.changed();
-    assert.equal((await a.api("/presets")).presets.length, 2);
+    assert.equal((await a.api(`/presets?vaultId=${account.vaultId}`)).presets.length, 2);
     a.edit([{ ...row("added"), ratio: 1000 }]); await syncA.changed();
-    assert.equal((await a.api("/presets")).presets[0].ratio, 1000);
+    assert.equal((await a.api(`/presets?vaultId=${account.vaultId}`)).presets[0].ratio, 1000);
     a.edit([]); await syncA.changed();
-    assert.deepEqual((await a.api("/presets")).presets, []);
+    assert.deepEqual((await a.api(`/presets?vaultId=${account.vaultId}`)).presets, []);
     await a.makeSync().resume(); assert.deepEqual(a.local(), []);
 
     const login = await b.api("/login/options", "POST", {});
@@ -62,17 +62,17 @@ test("PostgreSQL: authenticated automatic changes, reconnect, cross-device refre
     a.offline(true); a.edit([]); await syncA.changed();
     assert.equal(a.states.at(-1).phase, "offline");
     a.offline(false); await syncA.resume();
-    assert.deepEqual((await b.api("/presets")).presets, []);
+    assert.deepEqual((await b.api(`/presets?vaultId=${account.vaultId}`)).presets, []);
     b.edit([row("stale")]); await syncB.changed();
     assert.equal(b.states.at(-1).phase, "conflict");
-    assert.deepEqual((await a.api("/presets")).presets, []);
+    assert.deepEqual((await a.api(`/presets?vaultId=${account.vaultId}`)).presets, []);
     await syncB.choose("local");
     await syncA.refresh(); assert.deepEqual(a.local(), [row("stale")]);
 
-    const otherOptions = await other.api("/register/options", "POST", {});
-    const otherAccount = await other.api("/register/verify", "POST", authenticator().register(otherOptions.options)); ids.push(otherAccount.vaultId);
-    assert.deepEqual((await other.api("/presets")).presets, []);
-    await a.api("/logout", "POST", {}); syncA.disconnect();
+    const otherOptions = await other.api("/register/options", "POST", { vaultId: null });
+    const otherAccount = await other.api("/register/verify", "POST", { ...authenticator().register(otherOptions.options), vaultId: null }); ids.push(otherAccount.vaultId);
+    assert.deepEqual((await other.api(`/presets?vaultId=${otherAccount.vaultId}`)).presets, []);
+    await a.api("/logout", "POST", { vaultId: account.vaultId }); syncA.disconnect();
     assert.deepEqual(a.local(), [row("guest")]);
   } finally {
     for (const id of ids) await db.run("DELETE FROM vaults WHERE id = ?", id);
