@@ -89,7 +89,7 @@ test('source install caches one HTML document and preserves standalone module de
   assert.equal(h.installed.filter(path => path === '/' || path === '/index.html').length, 1);
   assert.equal(new Set(h.installed).size, h.installed.length);
   assert.ok(h.installed.includes('/catalog-data.js'));
-  assert.match(source, /carwash-offline-v19/);
+  assert.match(source, /carwash-offline-v20/);
 });
 
 for (const [label, path, mode] of [['navigation', '/', 'navigate'], ['font', 'https://cdn.jsdelivr.net/npm/pretendard/font.woff2', 'cors']]) {

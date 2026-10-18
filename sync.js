@@ -49,6 +49,7 @@ const sync = createVaultSync({ storage: localStorage, api, applyPresets,
   onState({ vaultId, phase, message, needsChoice }) {
     sessionMissing = phase === "guest" || phase === "expired";
     showSession(vaultId);
+    if (!sync.canManageAccount) accountActions.hidden = true;
     choice.hidden = !needsChoice;
     if (phase === "conflict") {
       document.getElementById("syncPanel").open = true;
@@ -80,13 +81,23 @@ function showRecovery(code) {
 }
 
 async function register() {
-  const { options } = await api("/register/options", "POST", {});
+  const vaultId = sync.vaultId;
+  if (vaultId) requireAccount();
+  const resultOptions = await api("/register/options", "POST", { vaultId });
+  if (resultOptions.vaultId === undefined) throw new ApiError(428, "동기화 서버 업데이트가 필요합니다. 변경사항은 이 기기에 보관됩니다.");
+  if (resultOptions.vaultId !== vaultId) throw new ApiError(401, "보관함이 바뀌었습니다. 다시 열어 주세요.");
+  const { options } = resultOptions;
   const credential = await startRegistration({ optionsJSON: options });
-  const result = await api("/register/verify", "POST", credential);
+  const result = await api("/register/verify", "POST", { ...credential, vaultId });
   login.remember();
   showRecovery(result.recoveryCode);
   if (sync.vaultId === result.vaultId) showStatus("이 보관함에 패스키를 추가했습니다.");
   else await sync.connect(result.vaultId, { created: !!result.recoveryCode });
+}
+
+function requireAccount() {
+  if (!sync.canManageAccount) throw new ApiError(428, "보관함 연결과 서버 업데이트를 확인한 뒤 다시 시도해 주세요.");
+  return sync.vaultId;
 }
 
 async function runAction(action, automatic = false) {
@@ -119,12 +130,14 @@ bind("useCloudBtn", () => sync.choose("cloud"));
 bind("useLocalBtn", () => sync.choose("local"));
 bind("refreshCloudBtn", () => sync.refresh());
 bind("logoutVaultBtn", async () => {
+  const vaultId = requireAccount();
   await sync.flush();
-  await api("/logout", "POST", {});
+  requireAccount();
+  await api("/logout", "POST", { vaultId });
   login.pause();
   sync.disconnect();
 });
-bind("rotateRecoveryBtn", async () => { const result = await api("/recovery-code", "POST", {}); showRecovery(result.recoveryCode); showStatus("새 복구 코드가 발급되었습니다. 이전 코드는 사용할 수 없습니다."); });
+bind("rotateRecoveryBtn", async () => { const result = await api("/recovery-code", "POST", { vaultId: requireAccount() }); showRecovery(result.recoveryCode); showStatus("새 복구 코드가 발급되었습니다. 이전 코드는 사용할 수 없습니다."); });
 bind("recoverVaultBtn", async () => {
   const result = await api("/recover", "POST", { code: document.getElementById("recoveryInput").value });
   login.pause(); // Recovery revokes every old passkey; registering a new one enables it again.

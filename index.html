@@ -247,11 +247,12 @@
           <div class="input-stepper-row">
             <button type="button" class="step-btn" id="waterMinusBtn" aria-label="물 용량 감소">−</button>
             <label class="number-field-wrap" for="waterInput">
-              <input type="number" id="waterInput" aria-label="물 용량" class="number-input" value="15" min="0.1" max="200000" step="0.5" inputmode="decimal" />
+              <input type="number" id="waterInput" aria-label="물 용량" aria-describedby="waterError" class="number-input" value="15" min="0.1" max="200000" step="0.5" inputmode="decimal" />
               <span class="field-suffix" id="waterUnitSuffix">L</span>
             </label>
             <button type="button" class="step-btn" id="waterPlusBtn" aria-label="물 용량 증가">+</button>
           </div>
+          <p class="concentration-error" id="waterError" role="status" hidden>0보다 큰 물 용량을 입력해 주세요.</p>
 
           <div class="quick-grid" id="waterQuickGrid">
             <button type="button" class="quick-chip" data-water-l="1">
@@ -307,10 +308,11 @@
             <button type="button" class="step-btn" id="ratioMinusBtn" aria-label="희석 비율 10 감소">−</button>
             <label class="number-field-wrap" for="ratioInput">
               <span class="ratio-prefix">1 :</span>
-              <input type="number" id="ratioInput" aria-label="희석비율의 물 비율" class="number-input" value="500" min="0" step="any" inputmode="decimal" />
+              <input type="number" id="ratioInput" aria-label="희석비율의 물 비율" aria-describedby="ratioError" class="number-input" value="500" min="0" step="any" inputmode="decimal" />
             </label>
             <button type="button" class="step-btn" id="ratioPlusBtn" aria-label="희석 비율 10 증가">+</button>
           </div>
+          <p class="concentration-error" id="ratioError" role="status" hidden>0보다 큰 희석비율을 입력해 주세요.</p>
 
           <div class="quick-grid" id="ratioQuickGrid">
             <button type="button" class="quick-chip" data-ratio="5">
@@ -770,7 +772,7 @@
         return 250;
       }
 
-      function loadStorage() {
+      function loadStorage({ presetsOnly = false } = {}) {
         try {
           const rawPresets = localStorage.getItem(STORAGE_KEY);
           if (rawPresets) {
@@ -784,6 +786,7 @@
             state.presets = [...DEFAULT_PRESETS];
           }
 
+          if (presetsOnly) return;
           const rawState = localStorage.getItem(STATE_KEY);
           if (rawState) {
             const saved = JSON.parse(rawState);
@@ -919,18 +922,37 @@
       }
 
       function updateCalculations() {
+        // Product changes must persist even while calculator inputs are incomplete.
+        renderPresets();
+        saveStorage();
+        const water = Number(waterInput.value);
+        const ratio = Number(ratioInput.value);
         const percent = Number(percentInput.value);
+        const invalidWater = !Number.isFinite(water) || water <= 0 || !Number.isFinite(state.unit === "L" ? water * 1000 : water);
+        const invalidRatio = state.mixMode === "ratio" && (!Number.isFinite(ratio) || ratio <= 0);
         const invalidPercent = state.mixMode === "percent" && (!Number.isFinite(percent) || percent <= 0 || percent >= 100);
+        const invalid = invalidWater || invalidRatio || invalidPercent;
+        document.getElementById("waterError").hidden = !invalidWater;
+        document.getElementById("ratioError").hidden = !invalidRatio;
+        waterInput.setAttribute("aria-invalid", String(invalidWater));
+        ratioInput.setAttribute("aria-invalid", String(invalidRatio));
         percentError.hidden = !invalidPercent;
         percentInput.setAttribute("aria-invalid", String(invalidPercent));
-        copyResultBtn.disabled = invalidPercent;
-        togglePresetFormBtn.disabled = invalidPercent;
-        if (invalidPercent) {
+        copyResultBtn.disabled = invalid;
+        togglePresetFormBtn.disabled = invalid;
+        if (invalid) {
+          const message = invalidWater ? "물 용량을 먼저 확인해 주세요." : invalidRatio ? "희석비율을 먼저 확인해 주세요." : "농도를 먼저 확인해 주세요.";
           doseResultValue.textContent = "—";
           doseResultUnit.textContent = "";
-          pumpDoseText.textContent = "농도를 먼저 확인해 주세요.";
-          if (measuringDetails.open) pumpConversionText.textContent = "—";
-          formulaSummary.textContent = "올바른 농도를 입력해 주세요.";
+          pumpDoseText.textContent = message;
+          pumpConversionText.textContent = "—";
+          capConversionText.textContent = "—";
+          totalVolumeText.textContent = "—";
+          cylinderCaption.textContent = message;
+          cylinderFill.style.width = "0%";
+          ratioPercentageText.textContent = "—";
+          activeChemicalName.textContent = "입력값을 확인해 주세요.";
+          formulaSummary.textContent = message;
           return;
         }
         const doseMl = calculateDoseMl(state.waterMl, state.ratio);
@@ -971,9 +993,6 @@
           const chipRatio = Number(chip.dataset.ratio);
           chip.classList.toggle("is-active", chipRatio === state.ratio);
         });
-
-        renderPresets();
-        saveStorage();
       }
 
       let renderedPresets = null;
@@ -1077,13 +1096,14 @@
 
       // Water Input & Steppers
       waterInput.addEventListener("input", () => {
-        const val = parseFloat(waterInput.value);
-        if (Number.isFinite(val) && val > 0) {
-          state.waterMl = state.unit === "L" ? val * 1000 : val;
+        const val = Number(waterInput.value);
+        const waterMl = state.unit === "L" ? val * 1000 : val;
+        if (Number.isFinite(waterMl) && waterMl > 0) {
+          state.waterMl = waterMl;
           state.activePresetId = null;
           state.cupAutoMode = true;
-          updateCalculations();
         }
+        updateCalculations();
       });
 
       waterMinusBtn.addEventListener("click", () => {
@@ -1166,13 +1186,13 @@
       });
 
       ratioInput.addEventListener("input", () => {
-        const val = parseFloat(ratioInput.value);
+        const val = Number(ratioInput.value);
         if (Number.isFinite(val) && val > 0) {
           state.ratio = val;
           state.activePresetId = null;
           state.cupAutoMode = true;
-          updateCalculations();
         }
+        updateCalculations();
       });
 
       ratioMinusBtn.addEventListener("click", () => {
@@ -1237,7 +1257,13 @@
       });
 
       // Preset Form Toggle & Submit
+      let presetFormOwner = null;
+      function currentPresetOwner() {
+        try { return localStorage.getItem("carwash_local_owner_v1") || null; }
+        catch { return null; }
+      }
       function openPresetForm(presetToEdit = null) {
+        presetFormOwner = currentPresetOwner();
         presetFormError.classList.remove("is-visible");
         if (presetToEdit) {
           editingPresetId.value = presetToEdit.id;
@@ -1282,6 +1308,11 @@
 
       presetForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        if (currentPresetOwner() !== presetFormOwner) {
+          presetFormError.textContent = "보관함이 바뀌었어요. 원래 보관함을 다시 열거나 취소 후 다시 작성해 주세요.";
+          presetFormError.classList.add("is-visible");
+          return;
+        }
         if (presetRatioInput.disabled) return;
         const name = presetNameInput.value.trim();
         const category = presetCategoryInput.value;
@@ -1382,14 +1413,12 @@
 
       // Initialize
       window.addEventListener("carwash-presets-imported", () => {
-        loadStorage();
-        syncInputsFromState();
+        loadStorage({ presetsOnly: true });
         updateCalculations();
       });
       window.addEventListener("storage", (event) => {
         if (event.key !== STORAGE_KEY) return;
-        loadStorage();
-        syncInputsFromState();
+        loadStorage({ presetsOnly: true });
         updateCalculations();
       });
       loadStorage();

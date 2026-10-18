@@ -1,4 +1,4 @@
-const CACHE_NAME = "carwash-offline-v19";
+const CACHE_NAME = "carwash-offline-v20";
 const APP_FILES = ["/", "/pwa.js", "/catalog-picker.js", "/catalog-data.js", "/config.js", "/sync.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {

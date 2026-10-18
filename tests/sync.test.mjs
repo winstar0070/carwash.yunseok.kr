@@ -9,19 +9,59 @@ function deferred() {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
+
+test("every preset request is bound to the intended vault, including conflict choices", async () => {
+  const h = harness();
+  await h.sync.connect("vault-a");
+  h.edit([row("local")]); await h.sync.changed();
+  await h.sync.refresh();
+  for (const mode of ["cloud", "local", "merge"]) await h.sync.choose(mode);
+  for (const call of h.calls.filter(call => call.path === "/presets")) {
+    assert.equal(call.method === "GET" ? call.target : call.body.vaultId, "vault-a");
+  }
+});
+
+test("responses from another vault never replace local rows or the original account queue", async () => {
+  for (const action of ["connect", "refresh", "cloud", "local", "merge"]) {
+    const h = harness({ remote: [row("private-a")] });
+    await h.sync.connect("vault-a");
+    const baseline = h.queue("vault-a");
+    h.calls.length = 0;
+    h.server.vaultId = "vault-b";
+    h.server.presets = [row("private-b")]; h.server.revision = 20;
+    if (action === "connect") await h.sync.connect("vault-a");
+    else if (action === "refresh") await h.sync.refresh();
+    else await h.sync.choose(action);
+    assert.deepEqual(h.local(), [row("private-a")], action);
+    assert.deepEqual(h.queue("vault-a"), baseline, action);
+    assert.equal(h.puts().length, 0, action);
+    assert.equal(h.sync.vaultId, null, action);
+  }
+});
+
+test("an old server without response ownership leaves pending work intact", async () => {
+  const h = harness({ local: [row("local")], request: ({ path }) => path === "/presets" ? { presets: [], revision: 0 } : undefined });
+  await h.sync.connect("vault-a", { created: true });
+  assert.deepEqual(h.local(), [row("local")]);
+  assert.equal(h.queue("vault-a").dirty, true);
+  assert.equal(h.puts().length, 0);
+  assert.equal(h.states.at(-1).phase, "error");
+});
 function harness({ local = [], remote = [], revision = 0, owner = "", saved, request, canApplyRemote } = {}) {
   const values = new Map([[SYNC_KEYS.presets, JSON.stringify(local)], [SYNC_KEYS.owner, owner]]);
   if (saved) values.set(SYNC_KEYS.queue, JSON.stringify(saved));
   const storageWrites = [];
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => { storageWrites.push({ key, value }); values.set(key, value); } };
-  const server = { presets: clone(remote), revision };
+  const server = { vaultId: "vault-a", presets: clone(remote), revision };
   const calls = [], states = [], applied = [], timers = new Map();
   let timerID = 0;
   const api = async (path, method = "GET", body) => {
-    calls.push({ path, method, body: clone(body) });
+    const target = new URL(path, "http://localhost").searchParams.get("vaultId");
+    path = path.split("?")[0];
+    calls.push({ path, method, body: clone(body), target });
     const override = await request?.({ path, method, body, server });
     if (override !== undefined) return override;
-    if (path === "/session") return { vaultId: "vault-a" };
+    if (path === "/session") return { vaultId: server.vaultId };
     if (method === "GET") return clone(server);
     if (body.revision !== server.revision) throw Object.assign(new Error("conflict"), { statusCode: 409 });
     server.presets = clone(body.presets); server.revision++;
@@ -147,6 +187,7 @@ test("a late response after logout cannot replace guest data or mark unsaved wor
 test("signing into another account does not upload the previous account's pending data", async () => {
   const saved = { "vault-a": { presets: [row("private-a")], revision: 7, dirty: true } };
   const h = harness({ local: [row("private-a")], owner: "vault-a", saved, remote: [row("private-b")], revision: 3 });
+  h.server.vaultId = "vault-b";
   await h.sync.connect("vault-b");
   assert.deepEqual(h.local(), [row("private-b")]);
   assert.deepEqual(h.queue("vault-a"), saved["vault-a"]);
@@ -208,6 +249,7 @@ test("a delayed refresh cannot resurrect a product deleted by a newer acknowledg
 
 test("creating another vault never seeds it with the previous account's private list", async () => {
   const h = harness({ owner: "vault-a", local: [row("private-a")], saved: { "vault-a": { presets: [row("private-a")], revision: 3, dirty: false } } });
+  h.server.vaultId = "vault-b";
   await h.sync.connect("vault-b", { created: true });
   assert.deepEqual(h.local(), []); assert.equal(h.puts().length, 0);
 });
@@ -334,6 +376,7 @@ test("an old account refresh neither blocks a new account nor clears its active 
   await h.sync.connect("vault-a"); phase = "old";
   const oldRefresh = h.sync.refresh(); await oldStarted.promise;
   phase = "connect"; h.server.presets = [row("private-b")];
+  h.server.vaultId = "vault-b";
   await h.sync.connect("vault-b"); phase = "new";
   const currentRefresh = h.sync.refresh(); await newStarted.promise;
   oldWaiting.resolve(); await oldRefresh;
@@ -365,6 +408,7 @@ test("a refresh waiting for an old account save never queries the next account",
   await h.sync.connect("vault-a");
   h.edit([row("pending-a")]); const saving = h.sync.changed(); await started.promise;
   const refreshing = h.sync.refresh();
+  h.server.vaultId = "vault-b";
   h.server.presets = [row("private-b")]; await h.sync.connect("vault-b");
   const reads = h.calls.filter(call => call.method === "GET").length;
   waiting.resolve(); await Promise.all([saving, refreshing]);
