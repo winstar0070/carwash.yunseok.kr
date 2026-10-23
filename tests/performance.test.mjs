@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
-import { createApp } from '../server/app.js';
+import { createApp } from '../src/server/app.js';
 
-const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const html = await readFile(new URL('../src/client/index.html', import.meta.url), 'utf8');
 function calculator() {
   const elements = new Map(), values = new Map(), writes = [], events = [];
   const element = id => {

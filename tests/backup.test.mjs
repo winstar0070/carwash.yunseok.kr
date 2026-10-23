@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseBackup, mergePresets } from "../backup-data.js";
+import { parseBackup, mergePresets } from "../src/shared/backup-data.js";
 
 const sample = { name: "내 카샴푸", category: "카샴푸", ratio: 500, waterL: 15, note: "버킷용", pumpMl: 2.5 };
 

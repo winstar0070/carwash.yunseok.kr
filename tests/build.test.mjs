@@ -11,8 +11,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 test("Pages build publishes only runtime assets and removes stale private files", async () => {
   const directory = await mkdtemp(join(process.env.CARWASH_TEST_TEMP_DIR || tmpdir(), "carwash-build-"));
   try {
-    for (const file of ["index.html", "404.html", "_headers", "pwa.js", "sw.js", "manifest.webmanifest", "icons", "backup-data.js", "catalog-picker.js", "catalog-data.js", "config.js", "sync.js", "vault-sync.js", "passkey-login.js", "scripts/build.mjs", "package.json", "compose.yaml", ".env.example", "server", "migrations"]) {
-      try { await lstat(join(root, file)); } catch (error) { if (error.code === "ENOENT" && file === "404.html") continue; throw error; }
+    for (const file of ["src", "public", "db", "scripts/build.mjs", "package.json", "compose.yaml", ".env.example", "docs", "README.md", "AGENTS.md"]) {
       await mkdir(dirname(join(directory, file)), { recursive: true });
       await cp(join(root, file), join(directory, file), { recursive: true });
     }
@@ -21,7 +20,8 @@ test("Pages build publishes only runtime assets and removes stale private files"
     await writeFile(join(directory, "dist/.env.example"), "STALE_PRIVATE_CANARY");
     await writeFile(join(directory, "dist/server/private.js"), "STALE_SOURCE_CANARY");
     await writeFile(join(directory, ".env"), "FAKE_SECRET_CANARY");
-    await writeFile(join(directory, "icons/.env"), "NESTED_PRIVATE_CANARY");
+    await writeFile(join(directory, "public/icons/.env"), "NESTED_PRIVATE_CANARY");
+    await writeFile(join(directory, "public/private.txt"), "PUBLIC_PRIVATE_CANARY");
     const env = { ...process.env };
     delete env.CARWASH_API_BASE;
     env.CF_PAGES_COMMIT_SHA = "1234567890abcdef1234567890abcdef12345678";

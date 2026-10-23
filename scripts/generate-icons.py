@@ -29,7 +29,7 @@ def chunk(name: bytes, data: bytes) -> bytes:
     return struct.pack(">I", len(data)) + name + data + struct.pack(">I", zlib.crc32(name + data))
 
 
-directory = Path(__file__).resolve().parent.parent / "icons"
+directory = Path(__file__).resolve().parent.parent / "public" / "icons"
 directory.mkdir(exist_ok=True)
 for size, filename in [(192, "icon-192.png"), (512, "icon-512.png"), (180, "apple-touch-icon.png")]:
     rows = bytearray()

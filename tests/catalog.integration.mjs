@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { openStore } from "../server/store.js";
-import { createApp } from "../server/app.js";
-import { importCatalog } from "../server/catalog.js";
+import { openStore } from "../src/server/store.js";
+import { createApp } from "../src/server/app.js";
+import { importCatalog } from "../src/server/catalog.js";
 import { catalogFixture } from "./catalog-fixture.mjs";
 
 test("PostgreSQL: public catalog, idempotent imports, rollback and vault isolation", async () => {

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
-import { openStore } from '../server/store.js';
-import { createApp } from '../server/app.js';
-import { startMaintenance } from '../server/maintenance.js';
+import { openStore } from '../src/server/store.js';
+import { createApp } from '../src/server/app.js';
+import { startMaintenance } from '../src/server/maintenance.js';
 
 test('PostgreSQL: expiry remains enforced before a sweep, and indexed cleanup removes only expired rows', async () => {
   assert.ok(process.env.TEST_DATABASE_URL, 'Set TEST_DATABASE_URL to a disposable PostgreSQL database');

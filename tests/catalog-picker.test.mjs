@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createProductSearch, searchProducts, getProfiles, getRatioOptions, getPresetDefaults, getPumpOptions, loadCatalog } from "../catalog-data.js";
+import { createProductSearch, searchProducts, getProfiles, getRatioOptions, getPresetDefaults, getPumpOptions, loadCatalog } from "../src/client/catalog-data.js";
 
 const fixed = { profile_id: "foam", method: "foam_lance", calculation_allowed: true, ratio_basis: "concentrate_to_water", dilution_min: 10, dilution_max: 10, applicable_variant_ids: ["small"] };
 const product = { product_id: "wash", name: "AD 오토브라이트 ACID 워시", category: "liquid", variants: [{ variant_id: "small", option_name: "500ml", source_name: "Acid Wash 500ml" }, { variant_id: "large", option_name: "4L" }], dilution_profiles: [fixed, { ...fixed, profile_id: "range", method: "bucket", dilution_min: 400, dilution_max: 750, applicable_variant_ids: ["large"] }], pump_profiles: [{ pump_type: "optional", status: "verified_optional_nominal", pump_ml_min: 29.5735295625, pump_ml_max: 29.5735295625, applicable_variant_ids: ["large"] }] };

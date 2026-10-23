@@ -33,7 +33,8 @@ static HTML/CSS/JS (Cloudflare Pages 정적 배포)
 - 자주 쓰는 물 용량 빠른 선택 및 직접 입력.
 - 자주 쓰는 희석비율 빠른 선택 및 직접 입력.
 - 나만의 케미컬 프리셋(케미컬 이름, 권장 희석비율, 기본 용기 물 용량, 메모 등) 추가/수정/삭제 및 `localStorage` 영구 저장.
-- 빌드 도구 없이도 Cloudflare Pages에 즉시 배포 가능한 순수 정적 파일 구성 (`carwash.yunseok.kr`).
+- `npm run build`로 패스키 라이브러리와 브라우저 모듈을 번들링한 뒤 `dist/`를 Cloudflare Pages에 정적 배포한다 (`carwash.yunseok.kr`).
+- 선택적 패스키 보관함·자동 동기화와 공용 제품 카탈로그는 별도 Node API + PostgreSQL에서 제공한다.
 
 ## Brand Commitments
 

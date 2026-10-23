@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startMaintenance } from '../server/maintenance.js';
+import { startMaintenance } from '../src/server/maintenance.js';
 
 test('maintenance sweeps on startup and periodically, never overlaps, and stops before closing the DB', async () => {
   let tick, stopped = false, release;

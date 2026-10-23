@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from "@simplewebauthn/server";
-import { parseBackup } from "../backup-data.js";
+import { parseBackup } from "../shared/backup-data.js";
 import { listCatalog, getCatalogProduct } from "./catalog.js";
 
 class ApiError extends Error {

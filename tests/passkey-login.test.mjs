@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createPasskeyLogin, AUTO_LOGIN_KEY } from "../passkey-login.js";
-import { SYNC_KEYS } from "../vault-sync.js";
+import { createPasskeyLogin, AUTO_LOGIN_KEY } from "../src/client/passkey-login.js";
+import { SYNC_KEYS } from "../src/client/vault-sync.js";
 
 function harness({ remembered = false, owner = "", immediate = false, fail, storageFails = false } = {}) {
   const values = new Map([[SYNC_KEYS.owner, owner]]);

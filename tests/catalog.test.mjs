@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { parseCatalog, importCatalog } from "../server/catalog.js";
+import { parseCatalog, importCatalog } from "../src/server/catalog.js";
 import { catalogFixture } from "./catalog-fixture.mjs";
 
 test("catalog preserves evidence, nulls, one-sided ratios and all source fields", () => {

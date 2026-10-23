@@ -1,14 +1,14 @@
 ---
 version: 1
 slug: "index-html"
-primary_target: "index.html"
+primary_target: "src/client/index.html"
 related_targets: []
 ---
 
 # index.html Surface Brief
 
 ## Scope and Mode
-- Target: index.html
+- Target: src/client/index.html
 - Mode: Operate
 - Audience: 세차장에서 물 용량을 기준으로 원액을 계량하는 사용자.
 

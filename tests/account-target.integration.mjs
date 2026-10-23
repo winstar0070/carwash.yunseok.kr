@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { openStore } from "../server/store.js";
-import { createApp } from "../server/app.js";
-import { createVaultSync, SYNC_KEYS } from "../vault-sync.js";
+import { openStore } from "../src/server/store.js";
+import { createApp } from "../src/server/app.js";
+import { createVaultSync, SYNC_KEYS } from "../src/client/vault-sync.js";
 import { authenticator } from "./authenticator.mjs";
 
 const row = id => ({ id, name: id, category: "카샴푸", ratio: 500, waterL: 15, pumpMl: null, note: "" });

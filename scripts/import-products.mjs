@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { openStore } from "../server/store.js";
-import { importCatalog, parseCatalog } from "../server/catalog.js";
+import { openStore } from "../src/server/store.js";
+import { importCatalog, parseCatalog } from "../src/server/catalog.js";
 
 async function readInput() {
   const path = process.argv[2];

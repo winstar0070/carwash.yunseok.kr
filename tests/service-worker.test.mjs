@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 
-const source = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
+const source = await readFile(new URL('../src/client/sw.js', import.meta.url), 'utf8');
 const origin = 'https://carwash.test';
 const deferred = () => { let resolve; let reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 function worker({ put = async () => {}, fetch = async () => new Response('fresh'), stored = new Map() } = {}) {

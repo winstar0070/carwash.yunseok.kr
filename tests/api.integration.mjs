@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { openStore } from "../server/store.js";
-import { createApp } from "../server/app.js";
+import { openStore } from "../src/server/store.js";
+import { createApp } from "../src/server/app.js";
 import { authenticator } from "./authenticator.mjs";
 
 test("PostgreSQL: passkey lifecycle, account isolation, revisions and recovery", async () => {

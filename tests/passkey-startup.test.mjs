@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
-import { createPasskeyLogin, AUTO_LOGIN_KEY } from "../passkey-login.js";
-import { createVaultSync } from "../vault-sync.js";
+import { createPasskeyLogin, AUTO_LOGIN_KEY } from "../src/client/passkey-login.js";
+import { createVaultSync } from "../src/client/vault-sync.js";
 
-const source = (await readFile(new URL("../sync.js", import.meta.url), "utf8")).replace(/^import .*;\n/gm, "");
+const source = (await readFile(new URL("../src/client/sync.js", import.meta.url), "utf8")).replace(/^import .*;\n/gm, "");
 async function page({ session = false, supported = true, remembered = true, offline = false, cancel = false, legacyServer = false } = {}) {
   const elements = new Map(), calls = [], listeners = new Map();
   const element = id => {
@@ -18,7 +18,7 @@ async function page({ session = false, supported = true, remembered = true, offl
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   let authenticated = session;
   const context = {
-    createPasskeyLogin, createVaultSync, SYNC_KEYS: (await import("../vault-sync.js")).SYNC_KEYS,
+    createPasskeyLogin, createVaultSync, SYNC_KEYS: (await import("../src/client/vault-sync.js")).SYNC_KEYS,
     startRegistration: async () => { calls.push("registrar"); return { id: "new-key" }; },
     startAuthentication: async () => { calls.push("authenticator"); if (cancel) throw Object.assign(Error("cancelled"), { name: "NotAllowedError" }); return { id: "assertion" }; },
     browserSupportsWebAuthn: () => supported,

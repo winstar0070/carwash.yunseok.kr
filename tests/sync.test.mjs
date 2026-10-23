@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createVaultSync, SYNC_KEYS } from "../vault-sync.js";
+import { createVaultSync, SYNC_KEYS } from "../src/client/vault-sync.js";
 
 const clone = value => structuredClone(value);
 const row = id => ({ id, name: id, category: "카샴푸", ratio: 500, waterL: 15, pumpMl: null, note: "" });
