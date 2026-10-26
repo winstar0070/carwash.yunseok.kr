@@ -74,7 +74,7 @@
     .unit-btn { min-height: 36px; padding: 4px 10px; color: var(--text-secondary); font-size: 13px; border-radius: var(--radius-sm); }
     .unit-btn.is-active { background: var(--bg-elevated); color: var(--text-primary); font-weight: 650; }
     .input-stepper-row { display: grid; grid-template-columns: 48px 1fr 48px; gap: 8px; }
-    .step-btn { background: var(--bg-elevated); border-radius: var(--radius-md); font-size: 23px; height: 54px; }
+    .step-btn { background: var(--bg-elevated); border-radius: var(--radius-md); font-size: 23px; height: 54px; touch-action: manipulation; }
     .step-btn:hover { background: var(--bg-interactive); }
     .number-field-wrap { display: flex; align-items: center; border: 1px solid #ccc; border-radius: var(--radius-md); padding: 0 16px; min-width: 0; }
     .number-field-wrap:focus-within { border-color: #171717; }
@@ -346,6 +346,9 @@
             <button type="button" class="quick-chip" data-ratio="1000">
               <span>1 : 1000</span>
               <small>초고농축 샴푸</small>
+            </button>
+            <button type="button" class="quick-chip" data-ratio="2000">
+              <span>1 : 2000</span>
             </button>
           </div>
           </div>
