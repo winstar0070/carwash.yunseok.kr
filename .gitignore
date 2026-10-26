@@ -7,5 +7,14 @@ node_modules/
 dist/
 .wrangler/
 .dev.vars
+.dev.vars.*
 .env
+.env.*
+!.env.example
 data/
+backups/
+carwash-backup*.sql
+*.sql.gz
+*.dump
+*.pem
+*.key

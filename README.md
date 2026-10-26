@@ -13,7 +13,7 @@
 
 ## 빠른 실행
 
-Node.js와 pnpm을 준비한 뒤 저장소 루트에서 실행합니다.
+Node.js 24 LTS와 pnpm 10.28.2(`package.json`의 `packageManager`)를 준비한 뒤 저장소 루트에서 실행합니다. 정적 파일 제공에는 Python 3을 사용합니다.
 
 ```bash
 corepack enable
@@ -49,3 +49,18 @@ python3 -m http.server 8766 --directory dist
 - [구조 결정과 이번 검증](docs/architecture.md)
 - [제품 요구사항](docs/PRODUCT.md) · [승인된 디자인](docs/DESIGN.md)
 - [에이전트 작업 원칙](AGENTS.md)
+
+## 변경 검증
+
+```bash
+npm test
+npm run build
+```
+
+API 통합 테스트에는 별도의 테스트용 PostgreSQL이 필요합니다. 실행 방법은 [개발과 테스트](docs/development.md)를 참고하세요. 운영 DB나 개인 보관함 데이터를 테스트·이슈·PR에 포함하지 마세요. `.env.example`에는 설정 이름과 예시만 두고 실제 값은 Git에서 제외되는 `.env`에 보관합니다.
+
+## 라이선스
+
+프로젝트 코드는 [MIT License](LICENSE)로 제공합니다. 포함된 외부 스킬 문서와 의존성은 각자의 라이선스를 따릅니다. 자세한 구분은 [외부 자료 고지](THIRD_PARTY_NOTICES.md)를 참고하세요.
+
+`package.json`의 `private: true`는 실수로 npm 패키지를 배포하지 않기 위한 설정이며 GitHub 저장소의 공개 여부와는 별개입니다.

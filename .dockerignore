@@ -5,4 +5,12 @@ dist
 data
 tests
 .env
+.env.*
 .dev.vars
+.dev.vars.*
+backups
+carwash-backup*.sql
+*.sql.gz
+*.dump
+*.pem
+*.key
