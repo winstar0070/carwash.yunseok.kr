@@ -1,4 +1,4 @@
-import { METHODS, createProductSearch, getProfiles, getRatioOptions, getPresetDefaults, getPumpOptions, loadCatalog } from "./catalog-data.js";
+import { METHODS, createProductSearch, getProfiles, getRatioOptions, getPresetDefaults, getWaterGuidance, getPumpOptions, loadCatalog } from "./catalog-data.js";
 
 const $ = id => document.getElementById(id);
 const form = $("presetForm");
@@ -39,6 +39,10 @@ function closeResults() {
 }
 
 function clearSelection() {
+  form.waterGuidance = null;
+  form.catalogWaterBlocked = false;
+  $("presetEquipmentSelect").value = "";
+  $("presetEquipmentStatus").textContent = "장비는 계산기의 ‘내 장비’에서 추가할 수 있어요.";
   chosen = null;
   name.readOnly = false;
   $("catalogManual").textContent = "직접 입력";
@@ -157,6 +161,10 @@ function updateProfile() {
   water.readOnly = defaults.fixedDose;
   $("submitPresetFormBtn").disabled = defaults.fixedDose;
   water.value = defaults.waterL ?? "";
+  form.waterGuidance = getWaterGuidance(chosen, variant.value, profile.value);
+  form.catalogWaterBlocked = !current || defaults.fixedDose;
+  $("presetEquipmentSelect").value = "";
+  $("presetEquipmentStatus").textContent = form.catalogWaterBlocked ? "사용 방법을 먼저 확인하세요. 정량 투입 제품에는 장비 물량을 적용할 수 없어요." : "장비 물량을 적용해도 제품의 희석비율과 펌프 값은 유지됩니다.";
   $("presetCategoryInput").value = defaults.category;
   $("presetNoteInput").value = defaults.note;
   const options = getRatioOptions(current);
@@ -179,6 +187,7 @@ function updateProfile() {
 search.addEventListener("focus", ensureCatalog);
 search.addEventListener("input", () => {
   clearSelection();
+  form.catalogWaterBlocked = !!search.value.trim();
   name.value = "";
   ratio.value = "";
   water.value = "";
@@ -229,8 +238,13 @@ ratio.addEventListener("input", () => { ratioChoice.value = ""; });
 pumpChoice.addEventListener("change", () => { pump.value = pumps[pumpChoice.value]?.pump_ml_min ?? ""; });
 pump.addEventListener("input", () => { pumpChoice.value = ""; });
 $("catalogRetry").addEventListener("click", async () => { await ensureCatalog(); search.focus(); });
-form.addEventListener("carwash:preset-open", () => {
+form.addEventListener("carwash:preset-open", event => {
   clearSelection();
+  form.waterGuidance = event.detail?.waterGuidance || null;
+  if (form.waterGuidance) {
+    $("catalogWaterHelp").hidden = false;
+    $("catalogWaterHelp").textContent = `저장된 사용 지침: 물 ${form.waterGuidance.approximate ? "약 " : ""}${form.waterGuidance.waterL}L. 장비 물량 변경 전에 원문 조건을 확인하세요.`;
+  }
   search.value = "";
   status.textContent = $("editingPresetId").value ? "저장된 제품을 수정하고 있어요. 다른 제품을 검색하면 기존 입력을 초기화해요." : "검색 결과에서 제품을 선택하거나 케미컬 이름을 직접 입력하세요.";
 });

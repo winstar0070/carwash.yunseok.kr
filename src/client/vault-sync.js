@@ -3,7 +3,7 @@ export const SYNC_KEYS = Object.freeze({
   owner: "carwash_local_owner_v1", guest: "carwash_guest_presets_v1",
 });
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const signature = row => JSON.stringify([row.name, row.category || "기타", row.ratio, row.waterL, row.note || "", row.pumpMl ?? null]);
+const signature = row => JSON.stringify([row.name, row.category || "기타", row.ratio, row.waterL, row.note || "", row.pumpMl ?? null, row.waterGuidance ?? null]);
 
 // Keep stable IDs for local rows so edits/deletions made during a request can be replayed.
 function mergeRows(remote, local) {

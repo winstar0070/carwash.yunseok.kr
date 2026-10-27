@@ -32,3 +32,12 @@ test("invalid values and unsupported versions are rejected before import", () =>
   assert.throws(() => parseBackup("not json"));
   assert.throws(() => parseBackup(JSON.stringify(Array(501).fill(sample))));
 });
+
+
+test("manufacturer water guidance survives storage and is validated", () => {
+  const waterGuidance = { waterL: 16, approximate: true, sourceUrl: "https://example.com/product", claim: "물 약 16L" };
+  assert.deepEqual(parseBackup(JSON.stringify([{ ...sample, waterGuidance }]))[0].waterGuidance, waterGuidance);
+  for (const patch of [{ waterL: 0 }, { waterL: "16" }, { waterL: 1001 }, { approximate: "yes" }, { sourceUrl: "javascript:alert(1)" }, { claim: "x".repeat(1001) }]) {
+    assert.throws(() => parseBackup(JSON.stringify([{ ...sample, waterGuidance: { ...waterGuidance, ...patch } }])));
+  }
+});

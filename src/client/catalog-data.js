@@ -126,3 +126,17 @@ export async function loadCatalog(base, { fetcher = fetch, storage } = {}) {
   if (cached) return { data: cached, cached: true, refresh: refresh().catch(() => null) };
   return refresh();
 }
+
+// Keep the original water instruction with saved products, independently of user equipment.
+export function getWaterGuidance(product, variantId, profileId) {
+  const defaults = getPresetDefaults(product, variantId, profileId);
+  if (defaults.waterSource !== "catalog" || defaults.waterL > 1000) return null;
+  const profile = getProfiles(product, variantId).find(row => row.profile_id === profileId);
+  const variant = product.variants.find(row => row.variant_id === variantId);
+  let sourceUrl = "";
+  try {
+    const url = new URL(profile?.source_url || variant?.source_url);
+    if (["https:", "http:"].includes(url.protocol) && url.href.length <= 2000) sourceUrl = url.href;
+  } catch { /* Missing/unsafe source URLs remain plain, absent metadata. */ }
+  return { waterL: defaults.waterL, approximate: defaults.waterApproximate, sourceUrl, claim: typeof profile?.raw_claim === "string" ? profile.raw_claim.slice(0, 1000) : "" };
+}

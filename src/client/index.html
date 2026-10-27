@@ -92,6 +92,17 @@
     .mix-mode .unit-btn { min-height: 44px; }
     .concentration-field { height: 54px; }
     .concentration-help { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+    .equipment-panel { margin-top: 14px; font-size: 13px; }
+    .equipment-panel > summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--text-secondary); }
+    .equipment-controls { display: flex; align-items: end; gap: 8px; margin-top: 10px; }
+    .equipment-controls .form-field { flex: 1; }
+    .equipment-form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+    .equipment-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
+    .equipment-row > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .equipment-row .btn-ghost { padding: 8px; }
+    .undo-deletion { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+    .undo-deletion > span { flex: 1; font-size: 13px; overflow-wrap: anywhere; }
+    .equipment-form input, .equipment-controls select { font-size: 16px; }
     .concentration-error { margin-top: 8px; font-size: 12px; color: var(--accent-danger); }
     .pump-setting { margin: 18px 0; }
     .pump-setting label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-secondary); }
@@ -288,6 +299,25 @@
               <small>대형버킷</small>
             </button>
           </div>
+          <details class="equipment-panel" id="equipmentPanel">
+            <summary>내 장비 · 물 용량 불러오기</summary>
+            <p class="field-help">장비 목록은 이 브라우저에만 저장됩니다. 용기 전체 크기가 아닌, 먼저 받을 물의 양을 등록하세요.</p>
+            <div class="equipment-controls">
+              <div class="form-field"><label for="equipmentSelect">사용할 장비</label><select id="equipmentSelect" class="select-input"></select></div>
+              <button type="button" class="btn-ghost" id="equipmentApplyBtn">물량 적용</button>
+            </div>
+            <p class="field-help">제품의 최신 사용 지침을 먼저 확인하세요. 저장된 권장 물량이 있으면 변경 전에 확인합니다.</p>
+            <div id="equipmentList" aria-label="저장한 장비"></div>
+            <form id="equipmentForm" class="equipment-form">
+              <input type="hidden" id="editingEquipmentId" />
+              <div class="form-row-split">
+                <div class="form-field"><label for="equipmentNameInput">장비 이름</label><input id="equipmentNameInput" class="text-input" maxlength="40" placeholder="예: 내 버킷" required /></div>
+                <div class="form-field"><label for="equipmentWaterInput">기본 물 용량 (L)</label><input id="equipmentWaterInput" class="text-input" type="number" min="0.001" max="1000" step="any" inputmode="decimal" placeholder="예: 15" required /></div>
+              </div>
+              <div class="form-actions"><button type="button" class="btn-ghost" id="equipmentCancelBtn" hidden>수정 취소</button><button type="submit" class="btn-primary" id="equipmentSaveBtn">장비 추가</button></div>
+            </form>
+            <p class="field-help" id="equipmentStatus" role="status"></p>
+          </details>
         </div>
 
         <!-- Step 2: Dilution Ratio -->
@@ -535,6 +565,11 @@
               <input type="text" id="presetNoteInput" class="text-input" placeholder="예: 오염이 심할 때만 사용" maxlength="300" />
             </div>
           </div>
+          <div class="equipment-controls">
+            <div class="form-field"><label for="presetEquipmentSelect">내 장비의 물 용량</label><select id="presetEquipmentSelect" class="select-input"></select></div>
+            <button type="button" class="btn-ghost" id="presetEquipmentApplyBtn">물량 적용</button>
+          </div>
+          <p class="field-help" id="presetEquipmentStatus" role="status">장비는 계산기의 ‘내 장비’에서 추가할 수 있어요.</p>
           <p class="form-error" id="presetFormError" role="alert">케미컬 이름과 올바른 물 용량·희석비율을 입력해 주세요.</p>
           <div class="form-field" id="presetPumpField">
             <label for="presetPumpInput">펌프 1회 토출량 (ml · 선택)</label>
@@ -547,6 +582,10 @@
           </div>
         </form>
 
+        <div class="undo-deletion" id="undoDeletion" hidden>
+          <span id="undoDeleteText" role="status"></span>
+          <button type="button" class="btn-ghost" id="undoDeleteBtn">실행 취소</button>
+        </div>
         <div class="preset-list" id="presetList" role="list"></div>
 
         <div class="shelf-footer">
@@ -738,7 +777,166 @@
       const toastMessage = document.getElementById("toastMessage");
       const scaleButtons = document.querySelectorAll(".scale-btn");
 
+      const equipmentKey = "carwash_equipment_v1";
+      const el = id => document.getElementById(id);
+      let equipment = [];
+      let deletedPresets = [];
+      let listOwner = currentPresetOwner();
       let toastTimer = null;
+
+      function renderUndo() {
+        const last = deletedPresets.at(-1);
+        el("undoDeletion").hidden = !last;
+        el("undoDeleteText").textContent = last ? `‘${last.row.name}’ 삭제됨 · 새로고침 전까지 취소할 수 있어요.` : "";
+      }
+      function refreshListContext() {
+        const owner = currentPresetOwner();
+        if (owner !== listOwner) { deletedPresets = []; state.activePresetId = null; renderUndo(); }
+        listOwner = owner;
+        loadStorage({ presetsOnly: true });
+      }
+      function prepareListChange() {
+        let current;
+        try { current = localStorage.getItem(STORAGE_KEY); } catch { current = JSON.stringify(state.presets); }
+        if (currentPresetOwner() !== listOwner || current !== JSON.stringify(state.presets)) {
+          refreshListContext();
+          updateCalculations();
+          showToast("보관함이나 목록이 바뀌었어요. 최신 목록을 확인하고 다시 시도해 주세요.");
+          return false;
+        }
+        return true;
+      }
+      function restoreDefaultPresets() {
+        if (!prepareListChange()) return;
+        const confirmedOwner = listOwner, confirmedRows = JSON.stringify(state.presets);
+        if (!window.confirm(`현재 제품 ${state.presets.length}개를 기본 목록 ${DEFAULT_PRESETS.length}개로 대체할까요? 직접 저장한 제품은 목록에서 없어지고 작성 중인 내용도 취소됩니다. 연결된 보관함에도 자동 반영됩니다.`)) return;
+        if (!prepareListChange()) return;
+        if (confirmedOwner !== listOwner || confirmedRows !== JSON.stringify(state.presets)) {
+          showToast("확인 중 목록이 바뀌었어요. 최신 목록을 확인하고 다시 시도해 주세요."); return;
+        }
+        closePresetForm();
+        state.presets = DEFAULT_PRESETS.map(row => ({ ...row }));
+        state.activePresetId = DEFAULT_PRESETS[0].id;
+        state.waterMl = DEFAULT_PRESETS[0].waterL * 1000;
+        state.ratio = DEFAULT_PRESETS[0].ratio;
+        state.pumpMl = DEFAULT_PRESETS[0].pumpMl ?? null;
+        state.cupAutoMode = true;
+        deletedPresets = []; renderUndo();
+        syncInputsFromState(); updateCalculations();
+        showToast("기본 추천 케미컬 목록으로 복원했습니다");
+      }
+      el("undoDeleteBtn").addEventListener("click", () => {
+        if (!prepareListChange()) return;
+        if (state.presets.length >= 500) { showToast("제품은 최대 500개까지 저장할 수 있어요. 목록을 정리한 뒤 다시 취소해 주세요."); return; }
+        const last = deletedPresets.pop();
+        renderUndo();
+        if (!last || last.owner !== currentPresetOwner()) return;
+        if (state.presets.some(row => row.id === last.row.id)) {
+          showToast("이미 같은 제품이 있어 현재 내용을 유지했습니다."); return;
+        }
+        const rows = [...state.presets];
+        rows.splice(Math.min(last.index, rows.length), 0, last.row);
+        state.presets = rows;
+        updateCalculations();
+        showToast(`‘${last.row.name}’ 삭제를 취소했습니다.`);
+      });
+
+      function validEquipment(row) {
+        return row && typeof row.id === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(row.id)
+          && typeof row.name === "string" && row.name.trim().length > 0 && row.name.length <= 40
+          && Number.isFinite(row.waterL) && row.waterL >= 0.001 && row.waterL <= 1000;
+      }
+      function loadEquipment() {
+        try {
+          const rows = JSON.parse(localStorage.getItem(equipmentKey) || "[]");
+          if (!Array.isArray(rows) || rows.length > 50 || !rows.every(validEquipment) || new Set(rows.map(row => row.id)).size !== rows.length) throw new Error("invalid equipment");
+          equipment = rows;
+        } catch {
+          equipment = [];
+          el("equipmentStatus").textContent = "장비 목록을 읽지 못했어요. 브라우저 저장 설정과 기존 데이터를 확인해 주세요.";
+        }
+        renderEquipment();
+      }
+      function renderEquipment() {
+        for (const id of ["equipmentSelect", "presetEquipmentSelect"]) {
+          const select = el(id), selected = select.value;
+          select.innerHTML = `<option value="">${equipment.length ? "장비 선택" : "먼저 내 장비를 추가하세요"}</option>` + equipment.map(row => `<option value="${row.id}">${escapeHtml(row.name)} · 물 ${formatNumber(row.waterL, 3)}L</option>`).join("");
+          select.value = equipment.some(row => row.id === selected) ? selected : "";
+        }
+        el("equipmentList").innerHTML = equipment.map(row => `<div class="equipment-row"><span>${escapeHtml(row.name)} · 물 ${formatNumber(row.waterL, 3)}L</span><button type="button" class="btn-ghost" data-equipment-action="edit" data-id="${row.id}" aria-label="${escapeHtml(row.name)} 장비 수정">수정</button><button type="button" class="btn-ghost" data-equipment-action="delete" data-id="${row.id}" aria-label="${escapeHtml(row.name)} 장비 삭제">삭제</button></div>`).join("");
+      }
+      function persistEquipment(rows) {
+        try { localStorage.setItem(equipmentKey, JSON.stringify(rows)); }
+        catch { el("equipmentStatus").textContent = "장비를 저장하지 못했어요. 브라우저 저장 공간과 설정을 확인해 주세요."; return false; }
+        equipment = rows; renderEquipment(); return true;
+      }
+      function closeEquipmentEdit() {
+        el("editingEquipmentId").value = "";
+        el("equipmentNameInput").value = "";
+        el("equipmentWaterInput").value = "";
+        el("equipmentCancelBtn").hidden = true;
+        el("equipmentSaveBtn").textContent = "장비 추가";
+      }
+      el("equipmentCancelBtn").addEventListener("click", closeEquipmentEdit);
+      el("equipmentForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const id = el("editingEquipmentId").value;
+        const row = { id: id || `equipment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: el("equipmentNameInput").value.trim(), waterL: Number(el("equipmentWaterInput").value) };
+        if (!validEquipment(row)) { el("equipmentStatus").textContent = "장비 이름(1~40자)과 물 용량(0.001~1,000L)을 확인해 주세요."; return; }
+        loadEquipment();
+        if (id && !equipment.some(item => item.id === id)) { el("equipmentStatus").textContent = "다른 탭에서 삭제한 장비예요. 수정 취소 후 새로 추가해 주세요."; return; }
+        if (!id && equipment.length >= 50) { el("equipmentStatus").textContent = "장비는 최대 50개까지 저장할 수 있어요."; return; }
+        if (!persistEquipment(id ? equipment.map(item => item.id === id ? row : item) : [...equipment, row])) return;
+        closeEquipmentEdit();
+        el("equipmentStatus").textContent = `‘${row.name}’ 물 ${formatNumber(row.waterL, 3)}L를 이 브라우저에 저장했습니다.`;
+      });
+      el("equipmentList").addEventListener("click", event => {
+        const button = event.target.closest("button[data-equipment-action]");
+        if (!button) return;
+        loadEquipment();
+        const row = equipment.find(item => item.id === button.dataset.id);
+        if (!row) return;
+        if (button.dataset.equipmentAction === "delete") {
+          if (!persistEquipment(equipment.filter(item => item.id !== row.id))) return;
+          if (el("editingEquipmentId").value === row.id) closeEquipmentEdit();
+          el("equipmentStatus").textContent = `‘${row.name}’ 장비를 삭제했습니다. 제품에 저장한 물량은 유지됩니다.`;
+        } else {
+          el("editingEquipmentId").value = row.id;
+          el("equipmentNameInput").value = row.name;
+          el("equipmentWaterInput").value = row.waterL;
+          el("equipmentCancelBtn").hidden = false;
+          el("equipmentSaveBtn").textContent = "수정 저장";
+          el("equipmentNameInput").focus();
+        }
+      });
+      function applyEquipment(toForm) {
+        const select = el(toForm ? "presetEquipmentSelect" : "equipmentSelect");
+        const status = el(toForm ? "presetEquipmentStatus" : "equipmentStatus");
+        const id = select.value;
+        loadEquipment();
+        const row = equipment.find(item => item.id === id);
+        if (!row) { status.textContent = "적용할 장비를 먼저 선택해 주세요."; return; }
+        if (!prepareListChange()) return;
+        if (toForm && (presetForm.catalogWaterBlocked || presetRatioInput.disabled || presetWaterInput.readOnly)) {
+          status.textContent = "사용 방법을 먼저 선택해 주세요. 정량 투입 제품에는 장비 물량을 적용할 수 없어요."; return;
+        }
+        if (toForm && currentPresetOwner() !== presetFormOwner) { status.textContent = "보관함이 바뀌었어요. 취소 후 다시 작성해 주세요."; return; }
+        const guidance = toForm ? presetForm.waterGuidance : state.presets.find(item => item.id === state.activePresetId)?.waterGuidance;
+        if (guidance && guidance.waterL !== row.waterL) {
+          const confirmed = window.confirm(`이 제품의 저장된 사용 지침은 물 ${guidance.approximate ? "약 " : ""}${guidance.waterL}L입니다.\n${guidance.claim || "제품의 원문 사용 조건을 확인하세요."}\n${guidance.sourceUrl || ""}\n\n지침을 확인했으며 ‘${row.name}’의 물 ${row.waterL}L로 변경할까요?`);
+          if (!confirmed) { status.textContent = "장비 물량을 적용하지 않았어요. 기존 물량을 유지합니다."; return; }
+          if (!prepareListChange()) return;
+        }
+        if (toForm) presetWaterInput.value = row.waterL;
+        else {
+          state.waterMl = row.waterL * 1000;
+          state.cupAutoMode = true;
+          syncInputsFromState(); updateCalculations();
+        }
+        status.textContent = `‘${row.name}’의 물 ${formatNumber(row.waterL, 3)}L를 적용했습니다. 제품의 비율과 펌프 값은 유지합니다.`;
+      }
+      el("equipmentApplyBtn").addEventListener("click", () => applyEquipment(false));
+      el("presetEquipmentApplyBtn").addEventListener("click", () => applyEquipment(true));
 
       function showToast(msg) {
         toastMessage.textContent = msg;
@@ -840,14 +1038,14 @@
 
       function syncInputsFromState() {
         if (state.unit === "L") {
-          const liters = Number((state.waterMl / 1000).toFixed(2));
+          const liters = state.waterMl / 1000;
           waterInput.value = liters;
           waterInput.step = "0.5";
           waterUnitSuffix.textContent = "L";
           unitLiterBtn.classList.add("is-active");
           unitMlBtn.classList.remove("is-active");
         } else {
-          waterInput.value = Math.round(state.waterMl);
+          waterInput.value = state.waterMl;
           waterInput.step = "100";
           waterUnitSuffix.textContent = "ml";
           unitMlBtn.classList.add("is-active");
@@ -975,7 +1173,7 @@
 
         const activePreset = state.presets.find((p) => p.id === state.activePresetId);
         if (activePreset) {
-          activeChemicalName.textContent = `${activePreset.name} (1:${activePreset.ratio})`;
+          activeChemicalName.textContent = `${activePreset.name} (1:${state.ratio})`;
         } else {
           const waterShort = state.waterMl >= 1000 ? `${formatNumber(state.waterMl / 1000, 1)}L` : `${formatNumber(state.waterMl, 0)}ml`;
           activeChemicalName.textContent = `직접 계산 (물 ${waterShort} · 1:${state.ratio})`;
@@ -1021,11 +1219,7 @@
           `;
           const restoreBtn = document.getElementById("emptyRestoreBtn");
           if (restoreBtn) {
-            restoreBtn.addEventListener("click", () => {
-              state.presets = [...DEFAULT_PRESETS];
-              updateCalculations();
-              showToast("기본 추천 케미컬 프리셋을 복원했습니다");
-            });
+            restoreBtn.addEventListener("click", restoreDefaultPresets);
           }
           return;
         }
@@ -1282,13 +1476,17 @@
           presetNameInput.value = "";
           presetCategoryInput.value = "카샴푸";
           presetRatioInput.value = state.ratio;
-          presetWaterInput.value = Number((state.waterMl / 1000).toFixed(2));
+          presetWaterInput.value = state.waterMl / 1000;
           presetNoteInput.value = "";
           presetPumpInput.value = state.pumpMl ?? "";
           submitPresetFormBtn.textContent = "보관함에 저장";
         }
         presetForm.classList.add("is-open");
-        presetForm.dispatchEvent(new CustomEvent("carwash:preset-open"));
+        presetForm.waterGuidance = presetToEdit?.waterGuidance || null;
+        presetForm.catalogWaterBlocked = false;
+        el("presetEquipmentSelect").value = "";
+        el("presetEquipmentStatus").textContent = "장비는 계산기의 ‘내 장비’에서 추가할 수 있어요.";
+        presetForm.dispatchEvent(new CustomEvent("carwash:preset-open", { detail: { waterGuidance: presetForm.waterGuidance } }));
         (presetToEdit ? presetNameInput : document.getElementById("catalogSearchInput")).focus();
       }
 
@@ -1331,15 +1529,16 @@
         }
 
         const editId = editingPresetId.value;
+        const waterGuidance = presetForm.waterGuidance || undefined;
         if (editId) {
           state.presets = state.presets.map((p) =>
-            p.id === editId ? { ...p, name, category, ratio, waterL, note, pumpMl } : p
+            p.id === editId ? { ...p, name, category, ratio, waterL, note, pumpMl, waterGuidance } : p
           );
           state.activePresetId = editId;
           showToast(`'${name}' 프리셋을 수정했습니다`);
         } else {
           const newId = "preset-" + Date.now();
-          const newPreset = { id: newId, name, category, ratio, waterL, note, pumpMl };
+          const newPreset = { id: newId, name, category, ratio, waterL, note, pumpMl, waterGuidance };
           state.presets = [newPreset, ...state.presets];
           state.activePresetId = newId;
           showToast(`'${name}' 프리셋을 보관함에 추가했습니다`);
@@ -1365,12 +1564,17 @@
           if (!targetPreset) return;
 
           if (action === "delete") {
+            if (!prepareListChange()) return;
+            deletedPresets.push({ row: JSON.parse(JSON.stringify(targetPreset)), index: state.presets.findIndex(row => row.id === id), owner: currentPresetOwner() });
+            if (deletedPresets.length > 20) deletedPresets.shift();
+            renderUndo();
             state.presets = state.presets.filter((p) => p.id !== id);
             if (state.activePresetId === id) {
               state.activePresetId = null;
             }
             updateCalculations();
             showToast(`'${targetPreset.name}' 프리셋을 삭제했습니다`);
+            el("undoDeleteBtn").focus();
           } else if (action === "edit") {
             openPresetForm(targetPreset);
           }
@@ -1402,28 +1606,21 @@
         }
       });
 
-      resetPresetsBtn.addEventListener("click", () => {
-        state.presets = [...DEFAULT_PRESETS];
-        state.activePresetId = DEFAULT_PRESETS[0].id;
-        state.waterMl = DEFAULT_PRESETS[0].waterL * 1000;
-        state.ratio = DEFAULT_PRESETS[0].ratio;
-        state.pumpMl = DEFAULT_PRESETS[0].pumpMl ?? null;
-        state.cupAutoMode = true;
-        syncInputsFromState();
-        updateCalculations();
-        showToast("기본 추천 케미컬 목록으로 복원했습니다");
-      });
+      resetPresetsBtn.addEventListener("click", restoreDefaultPresets);
 
       // Initialize
       window.addEventListener("carwash-presets-imported", () => {
-        loadStorage({ presetsOnly: true });
+        refreshListContext();
         updateCalculations();
       });
       window.addEventListener("storage", (event) => {
-        if (event.key !== STORAGE_KEY) return;
-        loadStorage({ presetsOnly: true });
+        if (event.key === equipmentKey || event.key === null) loadEquipment();
+        if (![STORAGE_KEY, "carwash_local_owner_v1", null].includes(event.key)) return;
+        refreshListContext();
         updateCalculations();
       });
+      loadEquipment();
+      renderUndo();
       loadStorage();
       syncInputsFromState();
       updateCalculations();

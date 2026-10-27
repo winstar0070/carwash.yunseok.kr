@@ -1,3 +1,15 @@
+export function parseWaterGuidance(value) {
+  if (value == null) return undefined;
+  if (typeof value !== "object" || !Number.isFinite(value.waterL) || value.waterL <= 0 || value.waterL > 1000
+    || typeof value.approximate !== "boolean" || typeof value.claim !== "string" || value.claim.length > 1000
+    || typeof value.sourceUrl !== "string" || value.sourceUrl.length > 2000) throw new Error("제품의 권장 물량 정보를 확인해 주세요.");
+  if (value.sourceUrl) {
+    const source = new URL(value.sourceUrl);
+    if (!["https:", "http:"].includes(source.protocol)) throw new Error("제품 출처 URL을 확인해 주세요.");
+  }
+  return { waterL: value.waterL, approximate: value.approximate, sourceUrl: value.sourceUrl, claim: value.claim };
+}
+
 export function parseBackup(text) {
   const data = JSON.parse(text);
   if (!Array.isArray(data) && (data?.format !== "carwash-presets" || data?.version !== 1)) {
@@ -19,12 +31,13 @@ export function parseBackup(text) {
       || (pumpMl !== null && (!Number.isFinite(pumpMl) || pumpMl <= 0 || pumpMl > 1000))) {
       throw new Error(`${index + 1}번째 제품의 이름·비율·물 용량·펌프 토출량을 확인해 주세요.`);
     }
-    return { name, category, note, ratio: row.ratio, waterL: row.waterL, pumpMl };
+    const waterGuidance = parseWaterGuidance(row.waterGuidance);
+    return { name, category, note, ratio: row.ratio, waterL: row.waterL, pumpMl, ...(waterGuidance ? { waterGuidance } : {}) };
   });
 }
 
 export function mergePresets(existing, incoming, createId) {
-  const signature = (row) => JSON.stringify([row.name, row.category || "기타", row.ratio, row.waterL, row.note || "", row.pumpMl ?? null]);
+  const signature = (row) => JSON.stringify([row.name, row.category || "기타", row.ratio, row.waterL, row.note || "", row.pumpMl ?? null, row.waterGuidance ?? null]);
   const seen = new Set(existing.map(signature));
   const added = [];
   for (const row of incoming) {

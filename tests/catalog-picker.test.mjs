@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createProductSearch, searchProducts, getProfiles, getRatioOptions, getPresetDefaults, getPumpOptions, loadCatalog } from "../src/client/catalog-data.js";
+import { createProductSearch, searchProducts, getProfiles, getRatioOptions, getPresetDefaults, getWaterGuidance, getPumpOptions, loadCatalog } from "../src/client/catalog-data.js";
 
 const fixed = { profile_id: "foam", method: "foam_lance", calculation_allowed: true, ratio_basis: "concentrate_to_water", dilution_min: 10, dilution_max: 10, applicable_variant_ids: ["small"] };
 const product = { product_id: "wash", name: "AD 오토브라이트 ACID 워시", category: "liquid", variants: [{ variant_id: "small", option_name: "500ml", source_name: "Acid Wash 500ml" }, { variant_id: "large", option_name: "4L" }], dilution_profiles: [fixed, { ...fixed, profile_id: "range", method: "bucket", dilution_min: 400, dilution_max: 750, applicable_variant_ids: ["large"] }], pump_profiles: [{ pump_type: "optional", status: "verified_optional_nominal", pump_ml_min: 29.5735295625, pump_ml_max: 29.5735295625, applicable_variant_ids: ["large"] }] };
@@ -126,4 +126,14 @@ test("picker falls back to legacy products endpoint only when picker view is uns
   } });
   assert.deepEqual(calls, ["/api/products?view=picker", "/api/products"]);
   assert.equal(result.data.research_log, undefined);
+});
+
+
+test("manufacturer water guidance stays separate from equipment defaults and unsafe source URLs", () => {
+  assert.equal(getWaterGuidance(product, "small", "foam"), null);
+  const recommended = { ...fixed, recommended_water_ml: 16000, recommended_water_is_approximate: true, raw_claim: "물 약 16L", source_url: "https://example.com/instructions" };
+  const p = { ...product, dilution_profiles: [recommended] };
+  assert.deepEqual(getWaterGuidance(p, "small", "foam"), { waterL: 16, approximate: true, sourceUrl: "https://example.com/instructions", claim: "물 약 16L" });
+  assert.equal(getWaterGuidance(p, "large", "foam"), null);
+  assert.equal(getWaterGuidance({ ...p, dilution_profiles: [{ ...recommended, source_url: "javascript:alert(1)" }] }, "small", "foam").sourceUrl, "");
 });

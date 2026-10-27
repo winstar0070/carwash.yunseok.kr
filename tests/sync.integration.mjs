@@ -50,6 +50,16 @@ test("PostgreSQL: authenticated automatic changes, reconnect, cross-device refre
     a.edit([]); await syncA.changed();
     assert.deepEqual((await a.api(`/presets?vaultId=${account.vaultId}`)).presets, []);
     await a.makeSync().resume(); assert.deepEqual(a.local(), []);
+    const restored = { ...row("added"), ratio: 1000, waterL: 2, waterGuidance: { waterL: 16, approximate: true, sourceUrl: "https://example.com/instructions", claim: "물 약 16L" } };
+    // Undo after deletion has already reached PostgreSQL, then recover the same values after reconnect.
+    a.edit([restored]); await syncA.changed();
+    assert.deepEqual((await a.api(`/presets?vaultId=${account.vaultId}`)).presets, [restored]);
+    await a.makeSync().resume(); assert.deepEqual(a.local(), [restored]);
+    a.offline(true); a.edit([]); await syncA.changed();
+    a.edit([restored]); await syncA.changed();
+    a.offline(false); await syncA.resume();
+    assert.deepEqual((await a.api(`/presets?vaultId=${account.vaultId}`)).presets, [restored]);
+    a.edit([]); await syncA.changed();
 
     const login = await b.api("/login/options", "POST", {});
     await b.api("/login/verify", "POST", device.login(login.options));
